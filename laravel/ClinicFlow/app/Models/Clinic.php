@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Clinic extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'name',
+        'phone',
+        'address',
+        'logo',
+        'opening_time',
+        'closing_time',
+        'setup_fee',
+        'monthly_fee',
+        'billing_status',
+        'next_billing_date',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'opening_time' => 'datetime',
+        'closing_time' => 'datetime',
+        'next_billing_date' => 'date',
+        'is_active' => 'boolean',
+        'setup_fee' => 'decimal:2',
+        'monthly_fee' => 'decimal:2',
+    ];
+
+    /**
+     * Get all users belonging to this clinic
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    /**
+     * Get all doctors belonging to this clinic
+     */
+    public function doctors()
+    {
+        return $this->hasMany(Doctor::class);
+    }
+
+    /**
+     * Get all patients belonging to this clinic
+     */
+    public function patients()
+    {
+        return $this->hasMany(Patient::class);
+    }
+
+    /**
+     * Get all appointments for this clinic
+     */
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
+    /**
+     * Get all billing records for this clinic
+     */
+    public function billingRecords()
+    {
+        return $this->hasMany(BillingRecord::class);
+    }
+}
