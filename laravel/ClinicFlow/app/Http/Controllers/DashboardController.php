@@ -11,18 +11,22 @@ class DashboardController extends Controller
     /**
      * Display the dashboard
      */
-    public function index()
+    public function index(Request $request)
     {
         $clinicId = auth()->user()->clinic_id;
 
-        // Today's appointments
+        // Get date range from request or default to today
+        $startDate = $request->filled('start_date') ? Carbon::parse($request->start_date) : Carbon::today();
+        $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date) : Carbon::today();
+
+        // Today's appointments (filtered by date range)
         $todayAppointments = Appointment::forClinic($clinicId)
-            ->today()
+            ->whereBetween('appointment_date', [$startDate, $endDate])
             ->with(['patient', 'doctor'])
             ->orderBy('appointment_time')
             ->get();
 
-        // KPIs
+        // KPIs (filtered by date range)
         $todayTotal = $todayAppointments->count();
         $todayConfirmed = $todayAppointments->where('status', 'confirmed')->count();
         $todayCompleted = $todayAppointments->where('status', 'completed')->count();
@@ -34,9 +38,9 @@ class DashboardController extends Controller
             ->where('status', 'no_show')
             ->count();
 
-        // Upcoming appointments (next 7 days)
+        // Upcoming appointments (next 7 days from end date)
         $upcomingAppointments = Appointment::forClinic($clinicId)
-            ->whereBetween('appointment_date', [Carbon::today(), Carbon::today()->addDays(7)])
+            ->whereBetween('appointment_date', [$endDate->copy()->addDay(), $endDate->copy()->addDays(7)])
             ->whereIn('status', ['booked', 'confirmed'])
             ->with(['patient', 'doctor'])
             ->orderBy('appointment_date')
@@ -50,7 +54,9 @@ class DashboardController extends Controller
             'todayConfirmed',
             'todayCompleted',
             'monthlyNoShows',
-            'upcomingAppointments'
+            'upcomingAppointments',
+            'startDate',
+            'endDate'
         ));
     }
 }

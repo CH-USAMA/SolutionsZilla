@@ -30,6 +30,12 @@ class PatientController extends Controller
                     $gender = ucfirst($row->gender ?? '-');
                     return $age . ' / ' . $gender;
                 })
+                ->addColumn('medical_history_btn', function ($row) {
+                    if ($row->medical_history) {
+                        return '<button onclick="showHistory(\'' . addslashes($row->medical_history) . '\', \'' . addslashes($row->name) . '\')" class="text-blue-600 hover:text-blue-900 text-sm font-medium">View</button>';
+                    }
+                    return '<span class="text-gray-400 text-sm">-</span>';
+                })
                 ->filter(function ($instance) use ($request) {
                     if ($request->get('gender') == 'male' || $request->get('gender') == 'female' || $request->get('gender') == 'other') {
                         $instance->where('gender', $request->get('gender'));
@@ -43,7 +49,7 @@ class PatientController extends Controller
                         });
                     }
                 })
-                ->rawColumns(['action'])
+                ->rawColumns(['action', 'medical_history_btn'])
                 ->make(true);
         }
 

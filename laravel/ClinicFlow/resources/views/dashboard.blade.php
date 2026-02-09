@@ -6,6 +6,31 @@
     </x-slot>
 
     <div class="py-12">
+        <!-- Date Filter -->
+        <div class="mb-6">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap gap-4 items-end">
+                    <div>
+                        <x-input-label for="start_date" value="Start Date" />
+                        <x-text-input id="start_date" type="date" name="start_date"
+                            value="{{ $startDate->format('Y-m-d') }}" class="w-40" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="end_date" value="End Date" />
+                        <x-text-input id="end_date" type="date" name="end_date" value="{{ $endDate->format('Y-m-d') }}"
+                            class="w-40" />
+                    </div>
+
+                    <div>
+                        <x-primary-button>Filter</x-primary-button>
+                        <a href="{{ route('dashboard') }}"
+                            class="ml-2 text-gray-600 hover:text-gray-900 text-sm border-b border-gray-600">Clear</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 border-l-4 border-blue-500">
@@ -53,11 +78,11 @@
                                     </div>
                                     <div>
                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                    @if($appointment->status === 'confirmed') bg-green-100 text-green-800
-                                                    @elseif($appointment->status === 'completed') bg-gray-100 text-gray-800
-                                                    @elseif($appointment->status === 'cancelled') bg-red-100 text-red-800
-                                                    @elseif($appointment->status === 'no_show') bg-red-100 text-red-800
-                                                    @else bg-yellow-100 text-yellow-800 @endif">
+                                                            @if($appointment->status === 'confirmed') bg-green-100 text-green-800
+                                                            @elseif($appointment->status === 'completed') bg-gray-100 text-gray-800
+                                                            @elseif($appointment->status === 'cancelled') bg-red-100 text-red-800
+                                                            @elseif($appointment->status === 'no_show') bg-red-100 text-red-800
+                                                            @else bg-yellow-100 text-yellow-800 @endif">
                                             {{ ucfirst(str_replace('_', ' ', $appointment->status)) }}
                                         </span>
                                     </div>
