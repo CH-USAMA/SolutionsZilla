@@ -22,6 +22,10 @@ Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
 
     // Patients
     Route::resource('patients', PatientController::class);
+    Route::post('/patients/{patient}/documents', [PatientController::class, 'uploadDocument'])
+        ->name('patients.documents.upload');
+    Route::delete('/patients/{patient}/documents/{document}', [PatientController::class, 'deleteDocument'])
+        ->name('patients.documents.delete');
 
     // Appointments
     Route::resource('appointments', AppointmentController::class);

@@ -17,6 +17,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
+    <!-- Metronic Custom Styles -->
+    <link rel="stylesheet" href="{{ asset('css/metronic.css') }}">
+
     <!-- Additional Tailwind Config for Custom Colors -->
     <script>
         tailwind.config = {
@@ -47,20 +50,19 @@
         <div class="flex-1 flex flex-col overflow-hidden lg:ml-64">
             <!-- Top Bar (Mobile + User Info) -->
             <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6">
-                <div class="flex items-center space-x-4">
-                    <!-- Mobile Menu Button -->
-                    <button @click="sidebarOpen = true" class="lg:hidden text-gray-700 hover:text-gray-900">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
+                <!-- Mobile Menu Button -->
+                <button @click="sidebarOpen = true" class="lg:hidden text-gray-700 hover:text-gray-900 mr-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
 
-                    @if (isset($header))
-                        <div class="text-xl font-semibold text-gray-800">
-                            {{ $header }}
-                        </div>
-                    @endif
+                @if (isset($header))
+                    <div class="flex-1 w-full">
+                        {{ $header }}
+                    </div>
+                @endif
             </header>
 
             <!-- Page Content -->

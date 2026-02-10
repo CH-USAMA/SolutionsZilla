@@ -50,6 +50,14 @@ class Patient extends Model
     }
 
     /**
+     * Get patient's documents
+     */
+    public function documents()
+    {
+        return $this->hasMany(PatientDocument::class);
+    }
+
+    /**
      * Get patient's age
      */
     public function getAgeAttribute()

@@ -70,19 +70,21 @@
                         </div>
 
                         <div class="flex items-center justify-between mt-4">
-                            <form method="POST" action="{{ route('patients.destroy', $patient) }}" class="inline"
-                                onsubmit="return confirm('Are you sure?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                    class="text-red-600 hover:text-red-900 text-sm font-semibold">Delete
-                                    Patient</button>
-                            </form>
+                            <button form="delete-form" type="submit"
+                                class="text-red-600 hover:text-red-900 text-sm font-semibold">
+                                Delete Patient
+                            </button>
 
                             <x-primary-button>
                                 {{ __('Update Patient') }}
                             </x-primary-button>
                         </div>
+                    </form>
+
+                    <form id="delete-form" method="POST" action="{{ route('patients.destroy', $patient) }}"
+                        class="hidden" onsubmit="return confirm('Are you sure you want to delete this patient?');">
+                        @csrf
+                        @method('DELETE')
                     </form>
                 </div>
             </div>

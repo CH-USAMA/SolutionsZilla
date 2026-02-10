@@ -28,11 +28,13 @@ class AppointmentController extends Controller
                         '<div class="text-xs text-gray-500">' . $row->appointment_date->format('M d, Y') . '</div>';
                 })
                 ->addColumn('patient_name', function ($row) {
-                    return '<div class="text-sm font-medium text-gray-900">' . $row->patient->name . '</div>' .
-                        '<div class="text-sm text-gray-500">' . $row->patient->phone . '</div>';
+                    $name = $row->patient ? $row->patient->name : '<span class="text-red-500">Deleted Patient</span>';
+                    $phone = $row->patient ? $row->patient->phone : '';
+                    return '<div class="text-sm font-medium text-gray-900">' . $name . '</div>' .
+                        '<div class="text-sm text-gray-500">' . $phone . '</div>';
                 })
                 ->addColumn('doctor_name', function ($row) {
-                    return $row->doctor->name;
+                    return $row->doctor ? $row->doctor->name : '<span class="text-red-500">Deleted Doctor</span>';
                 })
                 ->editColumn('status', function ($row) {
                     $statusClass = match ($row->status) {

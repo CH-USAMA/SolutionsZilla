@@ -103,6 +103,9 @@ class PatientController extends Controller
         $patient->load([
             'appointments' => function ($query) {
                 $query->latest();
+            },
+            'documents' => function ($query) {
+                $query->latest();
             }
         ]);
 
@@ -158,5 +161,57 @@ class PatientController extends Controller
 
         return redirect()->route('patients.index')
             ->with('success', 'Patient deleted successfully.');
+    }
+
+    /**
+     * Upload a document for a patient
+     */
+    public function uploadDocument(Request $request, Patient $patient)
+    {
+        if ($patient->clinic_id !== auth()->user()->clinic_id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:10240'], // 10MB max
+            'description' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $file = $request->file('document');
+        $fileName = time() . '_' . $file->getClientOriginalName();
+        $filePath = $file->storeAs('patient_documents', $fileName, 'public');
+
+        $patient->documents()->create([
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $filePath,
+            'file_type' => $file->getClientOriginalExtension(),
+            'file_size' => $file->getSize(),
+            'description' => $request->description,
+            'uploaded_by' => auth()->id(),
+        ]);
+
+        return redirect()->route('patients.show', $patient)
+            ->with('success', 'Document uploaded successfully.');
+    }
+
+    /**
+     * Delete a patient document
+     */
+    public function deleteDocument(Patient $patient, $documentId)
+    {
+        if ($patient->clinic_id !== auth()->user()->clinic_id) {
+            abort(403);
+        }
+
+        $document = $patient->documents()->findOrFail($documentId);
+
+        // Delete file from storage
+        \Storage::disk('public')->delete($document->file_path);
+
+        // Delete database record
+        $document->delete();
+
+        return redirect()->route('patients.show', $patient)
+            ->with('success', 'Document deleted successfully.');
     }
 }
