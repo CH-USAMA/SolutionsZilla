@@ -20,13 +20,20 @@ class EnsureUserBelongsToClinic
             return redirect()->route('login');
         }
 
+        $user = auth()->user();
+
+        // Super Admin can access everything without clinic restriction
+        if ($user->isSuperAdmin()) {
+            return $next($request);
+        }
+
         // Ensure user has a clinic
-        if (!auth()->user()->clinic_id) {
+        if (!$user->clinic_id) {
             abort(403, 'User does not belong to any clinic.');
         }
 
         // Ensure clinic is active
-        if (!auth()->user()->clinic->is_active) {
+        if (!$user->clinic->is_active) {
             abort(403, 'Your clinic account is inactive. Please contact support.');
         }
 

@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\SendWhatsAppReminder;
+
 use App\Models\Appointment;
 use Illuminate\Console\Command;
 
@@ -29,25 +29,53 @@ class SendWhatsAppReminders extends Command
     {
         $this->info('Checking for appointments needing WhatsApp reminders...');
 
-        $appointments = Appointment::with(['patient', 'doctor', 'clinic'])
-            ->needingWhatsAppReminder()
-            ->get();
+        // Get all clinics with active WhatsApp settings
+        $clinics = \App\Models\Clinic::whereHas('whatsappSettings', function ($q) {
+            $q->where('is_active', true);
+        })->with('whatsappSettings')->get();
 
-        $count = $appointments->count();
+        foreach ($clinics as $clinic) {
+            $hours = $clinic->whatsappSettings->reminder_hours_before;
+            $this->info("Processing Clinic: {$clinic->name} (Reminders: {$hours}h before)");
 
-        if ($count === 0) {
-            $this->info('No appointments need WhatsApp reminders at this time.');
-            return 0;
+            $targetTime = \Carbon\Carbon::now()->addHours($hours);
+
+            // Scope logic directly here for dynamic hours
+            $appointments = Appointment::where('clinic_id', $clinic->id)
+                ->where('whatsapp_reminder_sent', false)
+                ->where('status', 'booked')
+                ->whereDate('appointment_date', $targetTime->toDateString())
+                ->whereTime('appointment_time', '>=', $targetTime->copy()->subMinutes(30)->toTimeString())
+                ->whereTime('appointment_time', '<=', $targetTime->copy()->addMinutes(30)->toTimeString())
+                ->with(['patient', 'doctor'])
+                ->get();
+
+            if ($appointments->isEmpty()) {
+                continue;
+            }
+
+            $this->info("Found " . $appointments->count() . " appointment(s) for {$clinic->name}");
+
+            foreach ($appointments as $appointment) {
+                try {
+                    $result = app(\App\Services\WhatsAppService::class)->sendAppointmentReminder($appointment);
+
+                    if ($result) {
+                        $appointment->update([
+                            'whatsapp_reminder_sent' => true,
+                            'whatsapp_reminder_sent_at' => now(),
+                        ]);
+                        $this->info("Sent WhatsApp reminder for appointment #{$appointment->id}");
+                    } else {
+                        $this->error("Failed to send WhatsApp reminder for appointment #{$appointment->id}");
+                    }
+                } catch (\Exception $e) {
+                    $this->error("Error sending reminder for appointment #{$appointment->id}: " . $e->getMessage());
+                }
+            }
         }
 
-        $this->info("Found {$count} appointment(s) needing WhatsApp reminders.");
-
-        foreach ($appointments as $appointment) {
-            SendWhatsAppReminder::dispatch($appointment);
-            $this->line("Queued WhatsApp reminder for appointment #{$appointment->id}");
-        }
-
-        $this->info('All WhatsApp reminders have been queued successfully!');
+        $this->info('WhatsApp reminder processing complete!');
 
         return 0;
     }

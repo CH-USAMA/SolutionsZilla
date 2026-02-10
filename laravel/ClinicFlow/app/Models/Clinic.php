@@ -72,4 +72,12 @@ class Clinic extends Model
     {
         return $this->hasMany(BillingRecord::class);
     }
+
+    /**
+     * Get the WhatsApp settings for this clinic
+     */
+    public function whatsappSettings()
+    {
+        return $this->hasOne(ClinicWhatsappSetting::class);
+    }
 }

@@ -6,11 +6,17 @@ use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WhatsAppWebhookController;
+use App\Http\Controllers\WhatsAppSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// WhatsApp Webhook (no auth required - Meta calls this)
+Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle'])->name('whatsapp.webhook');
+
 
 Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
 
@@ -33,7 +39,14 @@ Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
         ->name('appointments.update-status');
 
     // Reports
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::resource('reports', ReportController::class)->only(['index']);
+
+    // WhatsApp Manager
+    Route::get('/whatsapp/settings', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings');
+    Route::post('/whatsapp/settings', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.settings.update');
+    Route::get('/whatsapp/logs', [WhatsAppSettingsController::class, 'logs'])->name('whatsapp.logs');
+    Route::post('/whatsapp/test', [WhatsAppSettingsController::class, 'test'])->name('whatsapp.test');
+    Route::post('/whatsapp/create-test-appointment', [WhatsAppSettingsController::class, 'createTestAppointment'])->name('whatsapp.test.appointment');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

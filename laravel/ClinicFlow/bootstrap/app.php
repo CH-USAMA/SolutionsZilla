@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'clinic.tenant' => \App\Http\Middleware\EnsureUserBelongsToClinic::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            '/webhook/whatsapp',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

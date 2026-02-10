@@ -37,6 +37,15 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        // 1.1 Create WhatsApp Settings for Clinic
+        \App\Models\ClinicWhatsappSetting::create([
+            'clinic_id' => $clinic->id,
+            'phone_number_id' => '1234567890', // Demo ID
+            'access_token' => 'demo_access_token', // Will be encrypted
+            'default_template' => 'appointment_reminder',
+            'is_active' => true,
+        ]);
+
         // 2. Create Clinic Admin
         User::create([
             'clinic_id' => $clinic->id,

@@ -24,6 +24,7 @@ class Appointment extends Model
         'sms_reminder_sent',
         'whatsapp_reminder_sent_at',
         'sms_reminder_sent_at',
+        'confirmed_at',
     ];
 
     protected $casts = [
@@ -32,6 +33,7 @@ class Appointment extends Model
         'sms_reminder_sent' => 'boolean',
         'whatsapp_reminder_sent_at' => 'datetime',
         'sms_reminder_sent_at' => 'datetime',
+        'confirmed_at' => 'datetime',
     ];
 
     /**
