@@ -19,6 +19,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // 0. Create Super Admin
+        User::create([
+            'name' => 'Super Admin',
+            'email' => 'super@admin.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_SUPER_ADMIN,
+        ]);
+
         // 1. Create Demo Clinic
         $clinic = Clinic::create([
             'name' => 'Shifa International Clinic',
@@ -35,7 +43,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Dr. Admin',
             'email' => 'admin@shifa.com',
             'password' => Hash::make('password'),
-            'role' => 'clinic_admin',
+            'role' => User::ROLE_CLINIC_ADMIN,
             'phone' => '03001234567',
         ]);
 
@@ -45,12 +53,23 @@ class DatabaseSeeder extends Seeder
             'name' => 'Reception Desk',
             'email' => 'reception@shifa.com',
             'password' => Hash::make('password'),
-            'role' => 'receptionist',
+            'role' => User::ROLE_RECEPTIONIST,
             'phone' => '03007654321',
         ]);
 
         // 4. Create Doctors
+        // Doctor 1
+        $doc1User = User::create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Dr. Sarah Ahmed',
+            'email' => 'sarah@shifa.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_DOCTOR,
+            'phone' => '03211234567',
+        ]);
+
         $doc1 = Doctor::create([
+            'user_id' => $doc1User->id,
             'clinic_id' => $clinic->id,
             'name' => 'Dr. Sarah Ahmed',
             'specialization' => 'Cardiologist',
@@ -60,7 +79,18 @@ class DatabaseSeeder extends Seeder
             'is_available' => true,
         ]);
 
+        // Doctor 2
+        $doc2User = User::create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Dr. Ali Khan',
+            'email' => 'ali@shifa.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_DOCTOR,
+            'phone' => '03331234567',
+        ]);
+
         $doc2 = Doctor::create([
+            'user_id' => $doc2User->id,
             'clinic_id' => $clinic->id,
             'name' => 'Dr. Ali Khan',
             'specialization' => 'General Physician',

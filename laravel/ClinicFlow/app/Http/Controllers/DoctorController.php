@@ -15,7 +15,21 @@ class DoctorController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $doctors = Doctor::forClinic(auth()->user()->clinic_id)->latest();
+            $user = auth()->user();
+            $query = Doctor::query();
+
+            if ($user->isSuperAdmin()) {
+                // Super Admin sees all doctors
+                $query->latest();
+            } elseif ($user->isDoctor()) {
+                // Doctor sees only their own profile
+                $query->where('user_id', $user->id);
+            } else {
+                // Clinic Admin / Receptionist sees doctors for their clinic
+                $query->forClinic($user->clinic_id)->latest();
+            }
+
+            $doctors = $query; // DataTables accepts query builder
 
             return \Yajra\DataTables\Facades\DataTables::of($doctors)
                 ->addIndexColumn()

@@ -51,6 +51,11 @@ class User extends Authenticatable
         ];
     }
 
+    public const ROLE_SUPER_ADMIN = 'super_admin';
+    public const ROLE_CLINIC_ADMIN = 'clinic_admin';
+    public const ROLE_RECEPTIONIST = 'receptionist';
+    public const ROLE_DOCTOR = 'doctor';
+
     /**
      * Get the clinic that owns the user
      */
@@ -60,11 +65,27 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the doctor profile associated with the user
+     */
+    public function doctor()
+    {
+        return $this->hasOne(Doctor::class);
+    }
+
+    /**
+     * Check if user is super admin
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === self::ROLE_SUPER_ADMIN;
+    }
+
+    /**
      * Check if user is clinic admin
      */
     public function isClinicAdmin(): bool
     {
-        return $this->role === 'clinic_admin';
+        return $this->role === self::ROLE_CLINIC_ADMIN;
     }
 
     /**
@@ -72,6 +93,14 @@ class User extends Authenticatable
      */
     public function isReceptionist(): bool
     {
-        return $this->role === 'receptionist';
+        return $this->role === self::ROLE_RECEPTIONIST;
+    }
+
+    /**
+     * Check if user is doctor
+     */
+    public function isDoctor(): bool
+    {
+        return $this->role === self::ROLE_DOCTOR;
     }
 }

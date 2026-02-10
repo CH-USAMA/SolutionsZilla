@@ -31,9 +31,20 @@ class Doctor extends Model
     /**
      * Get the clinic that owns the doctor
      */
+    /**
+     * Get the clinic that owns the doctor
+     */
     public function clinic()
     {
         return $this->belongsTo(Clinic::class);
+    }
+
+    /**
+     * Get the user account associated with the doctor
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**
