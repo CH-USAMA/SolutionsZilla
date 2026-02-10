@@ -14,6 +14,8 @@ class ClinicWhatsappSetting extends Model
         'phone_number_id',
         'access_token',
         'default_template',
+        'message_type',
+        'custom_message',
         'reminder_hours_before',
         'is_active',
     ];

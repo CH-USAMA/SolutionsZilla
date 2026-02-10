@@ -27,6 +27,19 @@ class WhatsAppWebhookController extends Controller
             $entry = $request->input('entry.0');
             $changes = $entry['changes'][0] ?? null;
             $value = $changes['value'] ?? null;
+
+            // Get the Phone Number ID that received this message for multi-tenancy
+            $metadata = $value['metadata'] ?? null;
+            $phoneNumberId = $metadata['phone_number_id'] ?? null;
+
+            if (!$phoneNumberId) {
+                return response()->json(['status' => 'no_phone_id']);
+            }
+
+            // Find the clinic associated with this Phone Number ID
+            $setting = \App\Models\ClinicWhatsappSetting::where('phone_number_id', $phoneNumberId)->first();
+            $clinicId = $setting ? $setting->clinic_id : null;
+
             $messages = $value['messages'] ?? [];
 
             foreach ($messages as $message) {
@@ -39,7 +52,7 @@ class WhatsAppWebhookController extends Controller
 
                 // Log incoming message
                 WhatsappLog::create([
-                    'clinic_id' => 1, // TODO: Determine clinic from phone number mapping
+                    'clinic_id' => $clinicId,
                     'direction' => 'incoming',
                     'phone' => $phone,
                     'payload' => $message,
@@ -47,7 +60,9 @@ class WhatsAppWebhookController extends Controller
                 ]);
 
                 // Check for confirmation keywords
-                $this->handleConfirmation($phone, $messageText);
+                if ($clinicId) {
+                    $this->handleConfirmation($phone, $messageText);
+                }
             }
 
             return response()->json(['status' => 'ok']);
@@ -67,27 +82,52 @@ class WhatsAppWebhookController extends Controller
      */
     private function handleConfirmation(string $phone, string $messageText)
     {
-        // Check if message is a confirmation keyword
-        $confirmationKeywords = ['yes', 'ok', 'confirm'];
-        $normalizedText = strtolower(trim($messageText));
+        // Expand confirmation keywords (English & Urdu)
+        $confirmationKeywords = [
+            'yes',
+            'ok',
+            'confirm',
+            'done',
+            'booked',
+            'ji',
+            'han',
+            'theek',
+            'jee',
+            'جی',
+            'ہاں',
+            'ٹھیک',
+            'ہوگیا',
+            'تصدیق'
+        ];
 
-        if (!in_array($normalizedText, $confirmationKeywords)) {
+        $normalizedText = mb_strtolower(trim($messageText));
+
+        $isConfirmation = false;
+        foreach ($confirmationKeywords as $keyword) {
+            if (mb_strpos($normalizedText, $keyword) !== false) {
+                $isConfirmation = true;
+                break;
+            }
+        }
+
+        if (!$isConfirmation) {
             return;
         }
 
         // Find latest upcoming appointment for this phone number
+        // Match last 10 digits to be safe with country codes
         $appointment = Appointment::whereHas('patient', function ($query) use ($phone) {
             $query->where('phone', 'like', '%' . substr($phone, -10) . '%');
         })
             ->where('status', 'booked')
             ->whereNull('confirmed_at')
-            ->where('appointment_date', '>=', now())
+            ->where('appointment_date', '>=', now()->toDateString())
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->first();
 
         if ($appointment) {
-            // Confirm appointment (idempotent)
+            // Confirm appointment
             $appointment->update([
                 'confirmed_at' => now(),
                 'status' => 'confirmed',
@@ -96,6 +136,7 @@ class WhatsAppWebhookController extends Controller
             Log::info('Appointment confirmed via WhatsApp', [
                 'appointment_id' => $appointment->id,
                 'phone' => $phone,
+                'text' => $messageText,
             ]);
         }
     }

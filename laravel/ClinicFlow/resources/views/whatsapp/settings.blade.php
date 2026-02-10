@@ -35,28 +35,79 @@
                             encrypted.</p>
                     </div>
 
-                    <div>
-                        <x-input-label for="default_template" value="Default Template Name" />
-                        <x-text-input id="default_template" name="default_template" type="text"
-                            class="mt-1 block w-full" :value="old('default_template', $settings->default_template ?? 'appointment_reminder')" required />
-                        <x-input-error class="mt-2" :messages="$errors->get('default_template')" />
-                        <p class="mt-1 text-sm text-gray-500">The name of the approved template in your Meta account.
-                        </p>
+                    <!-- Message Configuration -->
+                    <div class="mt-8 border-t border-gray-100 pt-8"
+                        x-data="{ messageType: '{{ $settings->message_type ?? 'template' }}' }">
+                        <h3 class="text-lg font-medium text-brand-900 mb-4">{{ __('Message Customization') }}</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Message Type -->
+                            <div>
+                                <x-input-label for="message_type" :value="__('Reminder Message Type')" />
+                                <select id="message_type" name="message_type" x-model="messageType"
+                                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="template">
+                                        {{ __('WhatsApp Template (Required by Meta for first message)') }}</option>
+                                    <option value="text">{{ __('Simple Text (Flexible, no Meta approval needed)') }}
+                                    </option>
+                                </select>
+                                <p class="mt-2 text-xs text-gray-500">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    {{ __('Note: Simple Text works best after a patient has replied to your clinic.') }}
+                                </p>
+                            </div>
+
+                            <!-- Template Name (Only if template selected) -->
+                            <div x-show="messageType === 'template'">
+                                <x-input-label for="default_template" :value="__('Meta Template Name')" />
+                                <x-text-input id="default_template" name="default_template" type="text"
+                                    class="mt-1 block w-full" :value="old('default_template', $settings->default_template)" placeholder="e.g., appointment_reminder" />
+                                <x-input-error :messages="$errors->get('default_template')" class="mt-2" />
+                            </div>
+                        </div>
+
+                        <!-- Custom Message Text (Only if Text selected) -->
+                        <div class="mt-6" x-show="messageType === 'text'">
+                            <div class="flex justify-between items-end">
+                                <x-input-label for="custom_message" :value="__('Custom Message Content')" />
+                                <div class="text-xs text-brand-600 font-medium cursor-help"
+                                    title="Copy and paste these tags into your message">
+                                    {{ __('Available Tags:') }}
+                                    <span
+                                        class="bg-brand-50 px-1 py-0.5 rounded border border-brand-100">{patient_name}</span>
+                                    <span
+                                        class="bg-brand-50 px-1 py-0.5 rounded border border-brand-100">{clinic_name}</span>
+                                    <span
+                                        class="bg-brand-50 px-1 py-0.5 rounded border border-brand-100">{doctor_name}</span>
+                                    <span class="bg-brand-50 px-1 py-0.5 rounded border border-brand-100">{date}</span>
+                                    <span class="bg-brand-50 px-1 py-0.5 rounded border border-brand-100">{time}</span>
+                                </div>
+                            </div>
+                            <textarea id="custom_message" name="custom_message" rows="6"
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm font-mono text-sm leading-relaxed"
+                                placeholder="Write your custom message here...">{{ old('custom_message', $settings->custom_message) }}</textarea>
+                            <x-input-error :messages="$errors->get('custom_message')" class="mt-2" />
+                            <p class="mt-2 text-xs text-gray-500 italic">
+                                {{ __('Your message will be automatically populated with patient and appointment details.') }}
+                            </p>
+                        </div>
                     </div>
 
-                    <div>
-                        <x-input-label for="reminder_hours_before" value="Send Reminder (Hours Before)" />
-                        <x-text-input id="reminder_hours_before" name="reminder_hours_before" type="number"
-                            class="mt-1 block w-full" :value="old('reminder_hours_before', $settings->reminder_hours_before ?? 24)" required />
-                        <x-input-error class="mt-2" :messages="$errors->get('reminder_hours_before')" />
-                        <p class="mt-1 text-sm text-gray-500">Configure how many hours before the appointment the
-                            message should be sent (e.g., 2 or 24).</p>
-                    </div>
+                    <div class="mt-8 border-t border-gray-100 pt-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <x-input-label for="reminder_hours_before" :value="__('Send Reminder Before (Hours)')" />
+                                <x-text-input id="reminder_hours_before" name="reminder_hours_before" type="number"
+                                    class="mt-1 block w-full" :value="old('reminder_hours_before', $settings->reminder_hours_before ?? 24)" required />
+                                <x-input-error :messages="$errors->get('reminder_hours_before')" class="mt-2" />
+                            </div>
 
-                    <div class="flex items-center">
-                        <input id="is_active" name="is_active" type="checkbox" value="1"
-                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" {{ old('is_active', $settings->is_active) ? 'checked' : '' }}>
-                        <x-input-label for="is_active" value="Enabled" class="ml-2" />
+                            <div class="flex items-center mt-6">
+                                <input id="is_active" name="is_active" type="checkbox" value="1"
+                                    class="rounded border-gray-300 text-brand-600 shadow-sm focus:ring-brand-500" {{ old('is_active', $settings->is_active) ? 'checked' : '' }}>
+                                <x-input-label for="is_active" :value="__('Enable WhatsApp Reminders')" class="ml-2" />
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-4">

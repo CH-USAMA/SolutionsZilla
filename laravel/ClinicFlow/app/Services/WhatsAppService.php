@@ -31,7 +31,16 @@ class WhatsAppService
             $phone = $this->formatPhoneNumber($appointment->patient->phone);
             $message = $this->buildReminderMessage($appointment);
 
-            // Send via Meta Cloud API
+            // Send via Meta Cloud API based on message type
+            if ($settings->message_type === 'text') {
+                return $this->sendSimpleMessage(
+                    $settings,
+                    $phone,
+                    ['message' => $message],
+                    $appointment->id
+                );
+            }
+
             return $this->sendTemplateMessage(
                 $settings,
                 $phone,
@@ -44,6 +53,70 @@ class WhatsAppService
             Log::error('WhatsApp sending failed', [
                 'appointment_id' => $appointment->id,
                 'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Send simple text message via Meta WhatsApp Cloud API
+     */
+    public function sendSimpleMessage($settings, string $phone, array $params = [], ?int $appointmentId = null): bool
+    {
+        $clinicId = $settings->clinic_id;
+
+        // Prepare payload
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $phone,
+            'type' => 'text',
+            'text' => [
+                'preview_url' => false,
+                'body' => $params['message'],
+            ],
+        ];
+
+        // Create log entry (pending)
+        $log = WhatsappLog::create([
+            'clinic_id' => $clinicId,
+            'appointment_id' => $appointmentId,
+            'direction' => 'outgoing',
+            'phone' => $phone,
+            'payload' => $payload,
+            'status' => 'pending',
+        ]);
+
+        try {
+            // Call Meta WhatsApp Cloud API
+            $response = Http::withToken($settings->access_token)
+                ->post("https://graph.facebook.com/v20.0/{$settings->phone_number_id}/messages", $payload);
+
+            if ($response->successful()) {
+                // Update log to sent
+                $log->update([
+                    'response' => $response->json(),
+                    'status' => 'sent',
+                ]);
+
+                return true;
+            } else {
+                // Update log to failed
+                $log->update([
+                    'response' => $response->json(),
+                    'status' => 'failed',
+                    'error_message' => $response->body(),
+                ]);
+
+                return false;
+            }
+
+        } catch (\Exception $e) {
+            // Update log to failed
+            $log->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
             ]);
 
             return false;
@@ -119,20 +192,35 @@ class WhatsAppService
      */
     private function buildReminderMessage(Appointment $appointment): string
     {
+        $settings = $appointment->clinic->whatsappSettings;
+        $template = $settings->custom_message;
+
+        if (!$template) {
+            $template = "السلام علیکم {patient_name}!\n\n" .
+                "Reminder: You have an appointment tomorrow at {clinic_name}\n\n" .
+                "📅 Date: {date}\n" .
+                "⏰ Time: {time}\n" .
+                "👨‍⚕️ Doctor: {doctor_name}\n\n" .
+                "Please arrive 10 minutes early.\n" .
+                "To cancel or reschedule, please call us.\n\n" .
+                "JazakAllah Khair!";
+        }
+
         $clinicName = $appointment->clinic->name;
         $patientName = $appointment->patient->name;
         $doctorName = $appointment->doctor->name;
         $date = $appointment->appointment_date->format('d M Y');
         $time = date('h:i A', strtotime($appointment->appointment_time));
 
-        return "السلام علیکم {$patientName}!\n\n" .
-            "Reminder: You have an appointment tomorrow at {$clinicName}\n\n" .
-            "📅 Date: {$date}\n" .
-            "⏰ Time: {$time}\n" .
-            "👨‍⚕️ Doctor: {$doctorName}\n\n" .
-            "Please arrive 10 minutes early.\n" .
-            "To cancel or reschedule, please call us.\n\n" .
-            "JazakAllah Khair!";
+        $replace = [
+            '{clinic_name}' => $clinicName,
+            '{patient_name}' => $patientName,
+            '{doctor_name}' => $doctorName,
+            '{date}' => $date,
+            '{time}' => $time,
+        ];
+
+        return strtr($template, $replace);
     }
 
     /**

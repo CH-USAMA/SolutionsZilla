@@ -28,7 +28,9 @@ class WhatsAppSettingsController extends Controller
         $request->validate([
             'phone_number_id' => 'required|string',
             'access_token' => 'required|string',
-            'default_template' => 'required|string',
+            'default_template' => 'required_if:message_type,template|string|nullable',
+            'message_type' => 'required|in:template,text',
+            'custom_message' => 'required_if:message_type,text|string|nullable',
             'reminder_hours_before' => 'required|integer|min:1|max:168',
             'is_active' => 'boolean',
         ]);
@@ -41,6 +43,8 @@ class WhatsAppSettingsController extends Controller
                 'phone_number_id' => $request->phone_number_id,
                 'access_token' => $request->access_token,
                 'default_template' => $request->default_template,
+                'message_type' => $request->message_type,
+                'custom_message' => $request->custom_message,
                 'reminder_hours_before' => $request->reminder_hours_before,
                 'is_active' => $request->has('is_active'),
             ]
@@ -81,12 +85,22 @@ class WhatsAppSettingsController extends Controller
         $testPhone = '923038004684';
 
         $service = app(\App\Services\WhatsAppService::class);
-        $result = $service->sendTemplateMessage(
-            $settings,
-            $testPhone,
-            $settings->default_template,
-            ['message' => 'Test message from ClinicFlow!']
-        );
+        $testMessage = 'Test message from ClinicFlow! This verifies your ' . ($settings->message_type === 'text' ? 'Simple Text' : 'Template') . ' settings.';
+
+        if ($settings->message_type === 'text') {
+            $result = $service->sendSimpleMessage(
+                $settings,
+                $testPhone,
+                ['message' => $testMessage]
+            );
+        } else {
+            $result = $service->sendTemplateMessage(
+                $settings,
+                $testPhone,
+                $settings->default_template,
+                ['message' => $testMessage]
+            );
+        }
 
         if ($result) {
             return back()->with('success', 'Test message sent successfully to ' . $testPhone);
