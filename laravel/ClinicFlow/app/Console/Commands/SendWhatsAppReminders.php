@@ -4,6 +4,9 @@ namespace App\Console\Commands;
 
 
 use App\Models\Appointment;
+use App\Models\Clinic;
+use App\Services\WhatsAppService;
+use App\Services\SubscriptionService;
 use Illuminate\Console\Command;
 
 class SendWhatsAppReminders extends Command
@@ -25,16 +28,23 @@ class SendWhatsAppReminders extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(WhatsAppService $whatsAppService, \App\Services\SubscriptionService $subscriptionService)
     {
         $this->info('Checking for appointments needing WhatsApp reminders...');
 
         // Get all clinics with active WhatsApp settings
-        $clinics = \App\Models\Clinic::whereHas('whatsappSettings', function ($q) {
+        $clinics = Clinic::whereHas('whatsappSettings', function ($q) {
             $q->where('is_active', true);
-        })->with('whatsappSettings')->get();
+        })->with(['whatsappSettings', 'plan'])->get();
 
         foreach ($clinics as $clinic) {
+            /** @var \App\Models\Clinic $clinic */
+            // Check plan quota
+            if (!$subscriptionService->canSendWhatsApp($clinic)) {
+                $this->warn("Clinic: {$clinic->name} has reached its WhatsApp quota. Skipping reminders.");
+                continue;
+            }
+
             $hours = $clinic->whatsappSettings->reminder_hours_before;
             $this->info("Processing Clinic: {$clinic->name} (Reminders: {$hours}h before)");
 

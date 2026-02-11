@@ -13,14 +13,11 @@ return new class extends Migration {
     {
         // Modify users table
         Schema::table('users', function (Blueprint $table) {
-            // We use raw SQL to avoid doctrine/dbal dependency issues for modifying enums/columns
             // Change role to string to accept 'super_admin', 'doctor', etc.
             // Make clinic_id nullable for Super Admin who doesn't belong to a specific clinic
+            $table->string('role', 50)->default('receptionist')->change();
+            $table->unsignedBigInteger('clinic_id')->nullable()->change();
         });
-
-        // Execute raw SQL for modifying existing columns
-        DB::statement("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) NOT NULL DEFAULT 'receptionist'");
-        DB::statement("ALTER TABLE users MODIFY COLUMN clinic_id BIGINT UNSIGNED NULL");
 
         // Add user_id to doctors table
         Schema::table('doctors', function (Blueprint $table) {

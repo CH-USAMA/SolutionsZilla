@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\BelongsToClinic;
+
+use App\Traits\LogsActivity;
 
 class Patient extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, BelongsToClinic, LogsActivity;
 
     protected $fillable = [
         'clinic_id',
@@ -25,13 +28,7 @@ class Patient extends Model
         'date_of_birth' => 'date',
     ];
 
-    /**
-     * Get the clinic that owns the patient
-     */
-    public function clinic()
-    {
-        return $this->belongsTo(Clinic::class);
-    }
+    // Relationship inherited from BelongsToClinic trait
 
     /**
      * Get all appointments for this patient

@@ -1,62 +1,80 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Doctors') }}
-            </h2>
-            <a href="{{ route('doctors.create') }}"
-                class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500 transition">
-                Add Doctor
-            </a>
-        </div>
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight uppercase tracking-wider">
+            {{ __('Doctors') }}
+        </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="card">
-                <div class="card-body">
-
-                    <div class="mb-4">
-                        <label for="status_filter" class="mr-2 font-bold text-gray-700">Filter Status:</label>
+    <div class="py-12 bg-gray-50 min-h-screen">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
+                <!-- Card Header -->
+                <div
+                    class="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4 bg-gray-50/50">
+                    <h2 class="text-lg font-bold text-gray-900">All Doctors</h2>
+                    <div class="flex items-center gap-3">
                         <select id="status_filter"
-                            class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                            <option value="">All</option>
+                            class="text-xs border-gray-200 rounded-lg py-1.5 px-3 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">All Status</option>
                             <option value="1">Available</option>
                             <option value="0">Unavailable</option>
                         </select>
+                        <button id="export_csv"
+                            class="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold hover:bg-green-100 border border-green-200 transition">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z">
+                                </path>
+                            </svg>
+                            Export CSV
+                        </button>
+                        <a href="{{ route('doctors.create') }}"
+                            class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Doctor
+                        </a>
                     </div>
+                </div>
 
-                    <div class="overflow-x-auto">
-                        <table id="doctors-table" class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table id="doctors-table" class="min-w-full divide-y divide-gray-100">
+                        <thead class="bg-gray-50/80">
+                            <tr>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    No</th>
+                                @if(Auth::user()->isSuperAdmin())
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        No</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Name</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Specialization</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Phone</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Email</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
-                    </div>
+                                        class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        Clinic</th>
+                                @endif
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Name</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Specialization</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Phone</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Email</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Status</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -80,6 +98,9 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    @if(Auth::user()->isSuperAdmin())
+                        { data: 'clinic_name', name: 'clinic_name' },
+                    @endif
                     { data: 'name', name: 'name' },
                     { data: 'specialization', name: 'specialization' },
                     { data: 'phone', name: 'phone' },
@@ -91,6 +112,11 @@
 
             $('#status_filter').change(function () {
                 table.draw();
+            });
+
+            $('#export_csv').click(function () {
+                var params = '?export=csv&status=' + ($('#status_filter').val() || '');
+                window.location.href = "{{ route('doctors.index') }}" + params;
             });
         });
     </script>

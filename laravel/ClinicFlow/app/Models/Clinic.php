@@ -6,9 +6,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use Laravel\Cashier\Billable;
+
+use App\Traits\LogsActivity;
+
 class Clinic extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Billable, LogsActivity;
 
     protected $fillable = [
         'name',
@@ -21,6 +25,10 @@ class Clinic extends Model
         'monthly_fee',
         'billing_status',
         'next_billing_date',
+        'plan_id',
+        'subscription_status',
+        'trial_ends_at',
+        'subscription_ends_at',
         'is_active',
     ];
 
@@ -28,6 +36,8 @@ class Clinic extends Model
         'opening_time' => 'datetime',
         'closing_time' => 'datetime',
         'next_billing_date' => 'date',
+        'trial_ends_at' => 'datetime',
+        'subscription_ends_at' => 'datetime',
         'is_active' => 'boolean',
         'setup_fee' => 'decimal:2',
         'monthly_fee' => 'decimal:2',
@@ -76,8 +86,19 @@ class Clinic extends Model
     /**
      * Get the WhatsApp settings for this clinic
      */
-    public function whatsappSettings()
+    /**
+     * Get all SMS logs for this clinic
+     */
+    public function smsLogs()
     {
-        return $this->hasOne(ClinicWhatsappSetting::class);
+        return $this->hasMany(SmsLog::class);
+    }
+
+    /**
+     * Get the plan for this clinic.
+     */
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
     }
 }

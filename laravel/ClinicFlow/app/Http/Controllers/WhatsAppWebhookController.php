@@ -16,6 +16,15 @@ class WhatsAppWebhookController extends Controller
     {
         Log::info('WhatsApp Webhook received', ['payload' => $request->all()]);
 
+        // 1. Signature Verification (Production Security)
+        if (!$this->validateSignature($request)) {
+            Log::warning('WhatsApp Webhook: Invalid signature', [
+                'header' => $request->header('X-Hub-Signature-256'),
+                'body' => $request->getContent(),
+            ]);
+            return response('Unauthorized', 401);
+        }
+
         try {
             // Meta sends verification challenge on webhook setup
             if ($request->has('hub_mode') && $request->hub_mode === 'subscribe') {
@@ -46,8 +55,11 @@ class WhatsAppWebhookController extends Controller
                 return response()->json(['status' => 'no_phone_id']);
             }
 
-            // Find the clinic associated with this Phone Number ID
-            $setting = \App\Models\ClinicWhatsappSetting::where('phone_number_id', $phoneNumberId)->first();
+            // Find the clinic associated with this Phone Number ID (Global Scope bypassed for discovery)
+            $setting = \App\Models\ClinicWhatsappSetting::withoutGlobalScopes()
+                ->where('phone_number_id', $phoneNumberId)
+                ->first();
+
             $clinicId = $setting ? $setting->clinic_id : null;
 
             $messages = $value['messages'] ?? [];
@@ -58,13 +70,20 @@ class WhatsAppWebhookController extends Controller
 
             foreach ($messages as $message) {
                 $phone = $message['from'] ?? null;
+                $messageType = $message['type'] ?? null;
+
+                // Only handle text messages for confirmation
+                if ($messageType !== 'text') {
+                    continue;
+                }
+
                 $messageText = $message['text']['body'] ?? null;
 
                 if (!$phone || !$messageText) {
                     continue;
                 }
 
-                // Log incoming message
+                // Log incoming message (Global Scope will handle clinic_id if auth, but here we set it manually)
                 try {
                     WhatsappLog::create([
                         'clinic_id' => $clinicId,
@@ -79,7 +98,7 @@ class WhatsAppWebhookController extends Controller
 
                 // Check for confirmation keywords
                 if ($clinicId) {
-                    $this->handleConfirmation($phone, $messageText);
+                    $this->handleConfirmation($clinicId, $phone, $messageText);
                 }
             }
 
@@ -96,9 +115,33 @@ class WhatsAppWebhookController extends Controller
     }
 
     /**
+     * Validate incoming Meta Webhook signature
+     */
+    private function validateSignature(Request $request): bool
+    {
+        $signature = $request->header('X-Hub-Signature-256');
+
+        // If app_secret is not set, we skip validation for now (local dev convenience)
+        // But in production, this should be mandatory
+        $appSecret = config('services.whatsapp.app_secret');
+        if (empty($appSecret)) {
+            return true;
+        }
+
+        if (!$signature) {
+            return false;
+        }
+
+        $signature = str_replace('sha256=', '', $signature);
+        $expectedSignature = hash_hmac('sha256', $request->getContent(), $appSecret);
+
+        return hash_equals($expectedSignature, $signature);
+    }
+
+    /**
      * Handle appointment confirmation via WhatsApp
      */
-    private function handleConfirmation(string $phone, string $messageText)
+    private function handleConfirmation(int $clinicId, string $phone, string $messageText)
     {
         // Expand confirmation keywords (English & Urdu)
         $confirmationKeywords = [
@@ -111,11 +154,14 @@ class WhatsAppWebhookController extends Controller
             'han',
             'theek',
             'jee',
+            'okey',
+            'confirmado',
             'جی',
             'ہاں',
             'ٹھیک',
             'ہوگیا',
-            'تصدیق'
+            'تصدیق',
+            'جی ہاں'
         ];
 
         $normalizedText = mb_strtolower(trim($messageText));
@@ -133,10 +179,12 @@ class WhatsAppWebhookController extends Controller
         }
 
         // Find latest upcoming appointment for this phone number
-        // Match last 10 digits to be safe with country codes
-        $appointment = Appointment::whereHas('patient', function ($query) use ($phone) {
-            $query->where('phone', 'like', '%' . substr($phone, -10) . '%');
-        })
+        // Bypassing global scope as we are in background process with a specific clinic context
+        $appointment = Appointment::withoutGlobalScopes()
+            ->where('clinic_id', $clinicId)
+            ->whereHas('patient', function ($query) use ($phone) {
+                $query->where('phone', 'like', '%' . substr($phone, -10) . '%');
+            })
             ->where('status', 'booked')
             ->whereNull('confirmed_at')
             ->where('appointment_date', '>=', now()->toDateString())
@@ -153,8 +201,8 @@ class WhatsAppWebhookController extends Controller
 
             Log::info('Appointment confirmed via WhatsApp', [
                 'appointment_id' => $appointment->id,
+                'clinic_id' => $clinicId,
                 'phone' => $phone,
-                'text' => $messageText,
             ]);
         }
     }

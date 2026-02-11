@@ -2,9 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\SendSmsReminder;
 use App\Models\Appointment;
+use App\Models\Clinic;
+use App\Services\SmsService;
+use App\Services\SubscriptionService;
 use Illuminate\Console\Command;
+use Carbon\Carbon;
 
 class SendSmsReminders extends Command
 {
@@ -20,35 +23,62 @@ class SendSmsReminders extends Command
      *
      * @var string
      */
-    protected $description = 'Send SMS reminders for appointments 2 hours in advance';
+    protected $description = 'Send SMS reminders for appointments as configured per clinic';
 
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(SmsService $smsService, SubscriptionService $subscriptionService)
     {
         $this->info('Checking for appointments needing SMS reminders...');
 
-        $appointments = Appointment::with(['patient', 'doctor', 'clinic'])
-            ->needingSmsReminder()
-            ->get();
+        // Get all clinics with active SMS reminders (reusing whatsappSettings for notification preferences)
+        $clinics = Clinic::whereHas('whatsappSettings', function ($q) {
+            $q->where('is_active', true);
+        })->with(['whatsappSettings'])->get();
 
-        $count = $appointments->count();
+        foreach ($clinics as $clinic) {
+            /** @var Clinic $clinic */
 
-        if ($count === 0) {
-            $this->info('No appointments need SMS reminders at this time.');
-            return 0;
+            // Check Plan Quota
+            if (!$subscriptionService->canSendSms($clinic)) {
+                $this->warn("Clinic: {$clinic->name} has reached its SMS quota. Skipping.");
+                continue;
+            }
+
+            $hours = $clinic->whatsappSettings->reminder_hours_before; // Use same window for now
+            $this->info("Processing SMS for Clinic: {$clinic->name} ({$hours}h before)");
+
+            $targetTime = Carbon::now()->addHours($hours);
+
+            $appointments = Appointment::where('clinic_id', $clinic->id)
+                ->where('sms_reminder_sent', false)
+                ->where('status', 'booked')
+                ->whereDate('appointment_date', $targetTime->toDateString())
+                ->whereTime('appointment_time', '>=', $targetTime->copy()->subMinutes(30)->toTimeString())
+                ->whereTime('appointment_time', '<=', $targetTime->copy()->addMinutes(30)->toTimeString())
+                ->with(['patient', 'doctor'])
+                ->get();
+
+            foreach ($appointments as $appointment) {
+                $timeStr = $appointment->appointment_time instanceof Carbon ? $appointment->appointment_time->format('H:i') : Carbon::parse($appointment->appointment_time)->format('H:i');
+                $dateStr = $appointment->appointment_date instanceof Carbon ? $appointment->appointment_date->format('M d, Y') : Carbon::parse($appointment->appointment_date)->format('M d, Y');
+
+                $message = "Reminder: Your appointment with Dr. {$appointment->doctor->name} is scheduled for {$timeStr} on {$dateStr}. Support: {$clinic->phone}";
+
+                if ($smsService->sendSms($appointment->patient, $message, $clinic)) {
+                    $appointment->update([
+                        'sms_reminder_sent' => true,
+                        'sms_reminder_sent_at' => now(),
+                    ]);
+                    $this->info("SMS sent to appointment #{$appointment->id}");
+                } else {
+                    $this->error("Failed to send SMS to appointment #{$appointment->id}");
+                }
+            }
         }
 
-        $this->info("Found {$count} appointment(s) needing SMS reminders.");
-
-        foreach ($appointments as $appointment) {
-            SendSmsReminder::dispatch($appointment);
-            $this->line("Queued SMS reminder for appointment #{$appointment->id}");
-        }
-
-        $this->info('All SMS reminders have been queued successfully!');
-
+        $this->info('SMS reminder processing complete!');
         return 0;
     }
 }

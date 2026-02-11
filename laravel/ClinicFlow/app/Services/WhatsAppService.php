@@ -31,26 +31,19 @@ class WhatsAppService
             $phone = $this->formatPhoneNumber($appointment->patient->phone);
             $message = $this->buildReminderMessage($appointment);
 
-            // Send via Meta Cloud API based on message type
-            if ($settings->message_type === 'text') {
-                return $this->sendSimpleMessage(
-                    $settings,
-                    $phone,
-                    ['message' => $message],
-                    $appointment->id
-                );
-            }
-
-            return $this->sendTemplateMessage(
-                $settings,
+            // Dispatch background job for actual sending
+            \App\Jobs\SendWhatsAppMessageJob::dispatch(
+                $appointment->clinic_id,
                 $phone,
-                $settings->default_template,
+                $settings->message_type,
                 ['message' => $message],
                 $appointment->id
             );
 
+            return true;
+
         } catch (\Exception $e) {
-            Log::error('WhatsApp sending failed', [
+            Log::error('WhatsApp dispatch failed', [
                 'appointment_id' => $appointment->id,
                 'error' => $e->getMessage(),
             ]);

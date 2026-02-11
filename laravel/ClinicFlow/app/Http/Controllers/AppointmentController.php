@@ -8,21 +8,41 @@ use App\Models\Doctor;
 use App\Models\Patient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AppointmentController extends Controller
 {
+    protected $appointmentService;
+
+    public function __construct(\App\Services\AppointmentService $appointmentService)
+    {
+        $this->appointmentService = $appointmentService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $clinicId = auth()->user()->clinic_id;
+        if ($request->has('export')) {
+            return $this->exportCsv($request);
+        }
+
+        $user = auth()->user();
+        $isSuperAdmin = $user->isSuperAdmin();
 
         if ($request->ajax()) {
-            $query = Appointment::forClinic($clinicId)->with(['patient', 'doctor']);
+            $query = Appointment::query()->with(['patient', 'doctor', 'clinic']);
+
+            if (!$isSuperAdmin) {
+                $query->forClinic($user->clinic_id);
+            }
 
             return \Yajra\DataTables\Facades\DataTables::of($query)
                 ->addIndexColumn()
+                ->addColumn('clinic_name', function ($row) {
+                    return $row->clinic ? $row->clinic->name : '<span class="text-gray-400">System</span>';
+                })
                 ->editColumn('appointment_time', function ($row) {
                     return '<div class="font-bold">' . date('h:i A', strtotime($row->appointment_time)) . '</div>' .
                         '<div class="text-xs text-gray-500">' . $row->appointment_date->format('M d, Y') . '</div>';
@@ -85,11 +105,15 @@ class AppointmentController extends Controller
                         });
                     }
                 })
-                ->rawColumns(['appointment_time', 'patient_name', 'status', 'action'])
+                ->rawColumns(['appointment_time', 'patient_name', 'status', 'action', 'clinic_name'])
                 ->make(true);
         }
 
-        $doctors = Doctor::forClinic($clinicId)->where('is_available', true)->get();
+        $doctorQuery = Doctor::query()->where('is_available', true);
+        if (!$isSuperAdmin) {
+            $doctorQuery->forClinic($user->clinic_id);
+        }
+        $doctors = $doctorQuery->get();
 
         return view('appointments.index', compact('doctors'));
     }
@@ -99,8 +123,14 @@ class AppointmentController extends Controller
      */
     public function create()
     {
-        $clinicId = auth()->user()->clinic_id;
-        $doctors = Doctor::forClinic($clinicId)->where('is_available', true)->get();
+        $user = auth()->user();
+        $isSuperAdmin = $user->isSuperAdmin();
+
+        $doctorQuery = Doctor::query()->where('is_available', true);
+        if (!$isSuperAdmin) {
+            $doctorQuery->forClinic($user->clinic_id);
+        }
+        $doctors = $doctorQuery->get();
 
         return view('appointments.create', compact('doctors'));
     }
@@ -110,43 +140,27 @@ class AppointmentController extends Controller
      */
     public function store(StoreAppointmentRequest $request)
     {
-        $clinicId = auth()->user()->clinic_id;
+        try {
+            $clinic = auth()->user()->clinic;
 
-        // Find or create patient
-        $patient = Patient::firstOrCreate(
-            [
-                'clinic_id' => $clinicId,
-                'phone' => $request->patient_phone
-            ],
-            [
+            $data = [
                 'name' => $request->patient_name,
+                'phone' => $request->patient_phone,
                 'email' => $request->patient_email,
-            ]
-        );
+                'doctor_id' => $request->doctor_id,
+                'appointment_date' => $request->appointment_date,
+                'appointment_time' => $request->appointment_time,
+                'reason' => $request->notes, // notes used as reason
+            ];
 
-        // Check for double booking (simple check)
-        $exists = Appointment::where('doctor_id', $request->doctor_id)
-            ->where('appointment_date', $request->appointment_date)
-            ->where('appointment_time', $request->appointment_time)
-            ->whereIn('status', ['booked', 'confirmed'])
-            ->exists();
+            $this->appointmentService->bookAppointment($data, $clinic);
 
-        if ($exists) {
-            return back()->withInput()->withErrors(['appointment_time' => 'This time slot is already booked for this doctor.']);
+            return redirect()->route('appointments.index', ['date' => $request->appointment_date])
+                ->with('success', 'Appointment booked successfully.');
+
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         }
-
-        Appointment::create([
-            'clinic_id' => $clinicId,
-            'patient_id' => $patient->id,
-            'doctor_id' => $request->doctor_id,
-            'appointment_date' => $request->appointment_date,
-            'appointment_time' => $request->appointment_time,
-            'status' => 'booked',
-            'notes' => $request->notes,
-        ]);
-
-        return redirect()->route('appointments.index', ['date' => $request->appointment_date])
-            ->with('success', 'Appointment booked successfully.');
     }
 
     /**
@@ -154,7 +168,7 @@ class AppointmentController extends Controller
      */
     public function show(Appointment $appointment)
     {
-        if ($appointment->clinic_id !== auth()->user()->clinic_id) {
+        if ($appointment->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
         return view('appointments.show', compact('appointment'));
@@ -165,7 +179,7 @@ class AppointmentController extends Controller
      */
     public function updateStatus(Request $request, Appointment $appointment)
     {
-        if ($appointment->clinic_id !== auth()->user()->clinic_id) {
+        if ($appointment->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
@@ -187,7 +201,7 @@ class AppointmentController extends Controller
      */
     public function destroy(Appointment $appointment)
     {
-        if ($appointment->clinic_id !== auth()->user()->clinic_id) {
+        if ($appointment->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
@@ -195,5 +209,70 @@ class AppointmentController extends Controller
 
         return redirect()->route('appointments.index')
             ->with('success', 'Appointment deleted successfully.');
+    }
+
+    /**
+     * Export appointments to CSV
+     */
+    private function exportCsv(Request $request)
+    {
+        $user = auth()->user();
+        $isSuperAdmin = $user->isSuperAdmin();
+
+        $query = Appointment::query()->with(['patient', 'doctor', 'clinic']);
+
+        if (!$isSuperAdmin) {
+            $query->forClinic($user->clinic_id);
+        }
+
+        // Apply filters
+        if ($request->filled('date')) {
+            $query->whereDate('appointment_date', $request->date);
+        }
+        if ($request->filled('doctor_id')) {
+            $query->where('doctor_id', $request->doctor_id);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $query->latest('appointment_date');
+
+        $appointments = $query->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="appointments_export_' . date('Y-m-d_H-i') . '.csv"',
+        ];
+
+        $callback = function () use ($appointments, $isSuperAdmin) {
+            $handle = fopen('php://output', 'w');
+
+            // CSV Header
+            $columns = ['ID', 'Date', 'Time', 'Patient', 'Doctor', 'Clinic', 'Status', 'Created At'];
+            if (!$isSuperAdmin) {
+                // Remove Clinic column if not super admin, though logic above adds it. Let's keep it simple.
+                // Actually, let's keep it consistent.
+            }
+            fputcsv($handle, $columns);
+
+            foreach ($appointments as $appointment) {
+                $row = [
+                    $appointment->id,
+                    $appointment->appointment_date->format('Y-m-d'),
+                    $appointment->appointment_time,
+                    $appointment->patient->name ?? 'Deleted Patient',
+                    $appointment->doctor->name ?? 'Deleted Doctor',
+                    $appointment->clinic->name ?? 'System',
+                    ucfirst($appointment->status),
+                    $appointment->created_at->format('Y-m-d H:i:s'),
+                ];
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        };
+
+        return new StreamedResponse($callback, 200, $headers);
     }
 }

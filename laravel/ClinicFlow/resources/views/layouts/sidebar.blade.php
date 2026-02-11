@@ -1,5 +1,5 @@
 <aside x-data="{ sidebarOpen: false }"
-    class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 lg:translate-x-0"
+    class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 lg:translate-x-0 flex flex-col h-screen"
     :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
     <!-- Sidebar Header -->
     <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
@@ -14,7 +14,7 @@
     </div>
 
     <!-- Navigation Links -->
-    <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+    <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto min-h-0">
         <a href="{{ route('dashboard') }}"
             class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition {{ request()->routeIs('dashboard') ? 'bg-blue-50 text-blue-600 font-semibold' : '' }}">
             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,6 +89,16 @@
                     Billing
                 </a>
 
+                <a href="{{ route('admin.logs.index') }}"
+                    class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition {{ request()->routeIs('admin.logs.*') ? 'bg-blue-50 text-blue-600 font-semibold' : '' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                        </path>
+                    </svg>
+                    Audit Logs
+                </a>
+
                 <div class="pt-4 mt-4 border-t border-gray-200">
                     <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">WhatsApp</p>
 
@@ -110,13 +120,69 @@
                         </svg>
                         WhatsApp Logs
                     </a>
+
+                    <a href="{{ route('sms.logs') }}"
+                        class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition {{ request()->routeIs('sms.logs') ? 'bg-blue-50 text-blue-600 font-semibold' : '' }}">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z">
+                            </path>
+                        </svg>
+                        SMS Logs
+                    </a>
                 </div>
+            </div>
+        @endif
+
+        @if(Auth::user()->isSuperAdmin())
+            <div class="pt-4 mt-4 border-t border-gray-200">
+                <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Super Admin</p>
+
+                <a href="{{ route('admin.dashboard') }}"
+                    class="flex items-center px-4 py-3 mt-2 text-gray-700 rounded-lg hover:bg-gray-100 transition {{ request()->routeIs('admin.dashboard') ? 'bg-blue-50 text-blue-600 font-semibold' : '' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                        </path>
+                    </svg>
+                    SaaS Overview
+                </a>
+
+                <a href="{{ route('super-admin.logs.index') }}"
+                    class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition {{ request()->routeIs('super-admin.logs.*') ? 'bg-blue-50 text-blue-600 font-semibold' : '' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                        </path>
+                    </svg>
+                    Global Audit
+                </a>
+
+                <a href="{{ route('super-admin.plans.index') }}"
+                    class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition {{ request()->routeIs('super-admin.plans.*') ? 'bg-blue-50 text-blue-600 font-semibold' : '' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                        </path>
+                    </svg>
+                    Plan Management
+                </a>
+
+                <a href="{{ route('super-admin.clinics.index') }}"
+                    class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition {{ request()->routeIs('super-admin.clinics.*') ? 'bg-blue-50 text-blue-600 font-semibold' : '' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                        </path>
+                    </svg>
+                    Clinic Management
+                </a>
             </div>
         @endif
     </nav>
 
     <!-- User Profile Section -->
-    <div class="p-4 border-t border-gray-200">
+    <div class="p-4 border-t border-gray-200 flex-shrink-0">
         <div x-data="{ profileOpen: false }" class="relative">
             <button @click="profileOpen = !profileOpen"
                 class="flex items-center w-full px-4 py-3 text-left text-gray-700 rounded-lg hover:bg-gray-100 transition">

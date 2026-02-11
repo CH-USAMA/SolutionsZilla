@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToClinic;
 
 class WhatsappLog extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToClinic;
 
     protected $fillable = [
         'clinic_id',
@@ -26,13 +27,7 @@ class WhatsappLog extends Model
         'response' => 'array',
     ];
 
-    /**
-     * Get the clinic that owns the log
-     */
-    public function clinic()
-    {
-        return $this->belongsTo(Clinic::class);
-    }
+    // Relationship inherited from BelongsToClinic trait
 
     /**
      * Get the appointment associated with the log

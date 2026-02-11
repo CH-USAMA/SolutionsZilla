@@ -5,13 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\BelongsToClinic;
 
 class Doctor extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, BelongsToClinic;
 
     protected $fillable = [
         'clinic_id',
+        'user_id',
         'name',
         'specialization',
         'phone',
@@ -28,16 +30,7 @@ class Doctor extends Model
         'availability_schedule' => 'array',
     ];
 
-    /**
-     * Get the clinic that owns the doctor
-     */
-    /**
-     * Get the clinic that owns the doctor
-     */
-    public function clinic()
-    {
-        return $this->belongsTo(Clinic::class);
-    }
+    // Relationship inherited from BelongsToClinic trait
 
     /**
      * Get the user account associated with the doctor

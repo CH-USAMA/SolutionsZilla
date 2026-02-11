@@ -6,11 +6,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Traits\BelongsToClinic;
+use App\Traits\LogsActivity;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, BelongsToClinic, LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -56,13 +58,7 @@ class User extends Authenticatable
     public const ROLE_RECEPTIONIST = 'receptionist';
     public const ROLE_DOCTOR = 'doctor';
 
-    /**
-     * Get the clinic that owns the user
-     */
-    public function clinic()
-    {
-        return $this->belongsTo(Clinic::class);
-    }
+    // Relationship inherited from BelongsToClinic trait
 
     /**
      * Get the doctor profile associated with the user

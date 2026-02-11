@@ -1,0 +1,28 @@
+<?php
+
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Appointment>
+ */
+class AppointmentFactory extends Factory
+{
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'clinic_id' => \App\Models\Clinic::factory(),
+            'patient_id' => \App\Models\Patient::factory(),
+            'doctor_id' => \App\Models\Doctor::factory(),
+            'appointment_date' => $this->faker->date(),
+            'appointment_time' => $this->faker->time(),
+            'status' => 'booked',
+        ];
+    }
+}

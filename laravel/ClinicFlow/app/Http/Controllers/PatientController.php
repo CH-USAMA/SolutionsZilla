@@ -5,19 +5,45 @@ namespace App\Http\Controllers;
 use App\Models\Patient;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+use App\Traits\ApiResponse;
 
 class PatientController extends Controller
 {
+    use ApiResponse;
+
+    protected $patientService;
+
+    public function __construct(\App\Services\PatientService $patientService)
+    {
+        $this->patientService = $patientService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        if ($request->ajax()) {
-            $patients = Patient::forClinic(auth()->user()->clinic_id)->latest();
+        if ($request->has('export')) {
+            return $this->exportCsv($request);
+        }
 
-            return \Yajra\DataTables\Facades\DataTables::of($patients)
+        if ($request->ajax()) {
+            $user = auth()->user();
+            $query = Patient::query()->with('clinic');
+
+            if (!$user->isSuperAdmin()) {
+                $query->forClinic($user->clinic_id);
+            }
+
+            $query->latest();
+
+            return \Yajra\DataTables\Facades\DataTables::of($query)
                 ->addIndexColumn()
+                ->addColumn('clinic_name', function ($row) {
+                    return $row->clinic ? $row->clinic->name : '<span class="text-gray-400">System</span>';
+                })
                 ->addColumn('action', function ($row) {
                     $viewUrl = route('patients.show', $row->id);
                     $editUrl = route('patients.edit', $row->id);
@@ -49,7 +75,7 @@ class PatientController extends Controller
                         });
                     }
                 })
-                ->rawColumns(['action', 'medical_history_btn'])
+                ->rawColumns(['clinic_name', 'action', 'medical_history_btn'])
                 ->make(true);
         }
 
@@ -69,7 +95,7 @@ class PatientController extends Controller
      */
     public function store(Request $request)
     {
-        $clinicId = auth()->user()->clinic_id;
+        $clinic = auth()->user()->clinic;
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -81,10 +107,7 @@ class PatientController extends Controller
             'medical_history' => ['nullable', 'string'],
         ]);
 
-        Patient::create(array_merge(
-            $validated,
-            ['clinic_id' => $clinicId]
-        ));
+        $this->patientService->getOrCreateByPhone($validated['phone'], $validated['name'], $clinic, $validated);
 
         return redirect()->route('patients.index')
             ->with('success', 'Patient registered successfully.');
@@ -96,7 +119,7 @@ class PatientController extends Controller
     public function show(Patient $patient)
     {
         // Simple check instead of Policy for now to keep it simple as requested
-        if ($patient->clinic_id !== auth()->user()->clinic_id) {
+        if ($patient->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
@@ -117,7 +140,7 @@ class PatientController extends Controller
      */
     public function edit(Patient $patient)
     {
-        if ($patient->clinic_id !== auth()->user()->clinic_id) {
+        if ($patient->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
         return view('patients.edit', compact('patient'));
@@ -128,7 +151,7 @@ class PatientController extends Controller
      */
     public function update(Request $request, Patient $patient)
     {
-        if ($patient->clinic_id !== auth()->user()->clinic_id) {
+        if ($patient->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
@@ -153,7 +176,7 @@ class PatientController extends Controller
      */
     public function destroy(Patient $patient)
     {
-        if ($patient->clinic_id !== auth()->user()->clinic_id) {
+        if ($patient->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
@@ -168,27 +191,16 @@ class PatientController extends Controller
      */
     public function uploadDocument(Request $request, Patient $patient)
     {
-        if ($patient->clinic_id !== auth()->user()->clinic_id) {
+        if ($patient->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
-        $validated = $request->validate([
+        $request->validate([
             'document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:10240'], // 10MB max
             'description' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $file = $request->file('document');
-        $fileName = time() . '_' . $file->getClientOriginalName();
-        $filePath = $file->storeAs('patient_documents', $fileName, 'public');
-
-        $patient->documents()->create([
-            'file_name' => $file->getClientOriginalName(),
-            'file_path' => $filePath,
-            'file_type' => $file->getClientOriginalExtension(),
-            'file_size' => $file->getSize(),
-            'description' => $request->description,
-            'uploaded_by' => auth()->id(),
-        ]);
+        $this->patientService->uploadDocument($patient, $request->file('document'));
 
         return redirect()->route('patients.show', $patient)
             ->with('success', 'Document uploaded successfully.');
@@ -199,19 +211,75 @@ class PatientController extends Controller
      */
     public function deleteDocument(Patient $patient, $documentId)
     {
-        if ($patient->clinic_id !== auth()->user()->clinic_id) {
+        if ($patient->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
-        $document = $patient->documents()->findOrFail($documentId);
-
-        // Delete file from storage
-        \Storage::disk('public')->delete($document->file_path);
-
-        // Delete database record
-        $document->delete();
+        $this->patientService->deleteDocument($patient, $documentId);
 
         return redirect()->route('patients.show', $patient)
             ->with('success', 'Document deleted successfully.');
+    }
+
+    /**
+     * Export patients to CSV
+     */
+    private function exportCsv(Request $request)
+    {
+        $user = auth()->user();
+        $query = Patient::query()->with('clinic');
+
+        if (!$user->isSuperAdmin()) {
+            $query->forClinic($user->clinic_id);
+        }
+
+        $query->latest();
+
+        // Filters matching DataTables logic
+        if ($request->get('gender') == 'male' || $request->get('gender') == 'female' || $request->get('gender') == 'other') {
+            $query->where('gender', $request->get('gender'));
+        }
+
+        $patients = $query->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="patients_export_' . date('Y-m-d_H-i') . '.csv"',
+        ];
+
+        $callback = function () use ($patients, $user) {
+            $handle = fopen('php://output', 'w');
+
+            // CSV Header
+            $columns = ['ID', 'Name', 'Phone', 'Email', 'Gender', 'Age', 'Address', 'Medical History', 'Created At'];
+            if ($user->isSuperAdmin()) {
+                array_splice($columns, 1, 0, 'Clinic');
+            }
+            fputcsv($handle, $columns);
+
+            foreach ($patients as $patient) {
+                $row = [
+                    $patient->id,
+                    $patient->name,
+                    $patient->phone,
+                    $patient->email,
+                    ucfirst($patient->gender),
+                    $patient->age,
+                    $patient->address,
+                    $patient->medical_history,
+                    $patient->created_at->format('Y-m-d H:i:s'),
+                ];
+
+                if ($user->isSuperAdmin()) {
+                    array_splice($row, 1, 0, $patient->clinic->name ?? 'System');
+                }
+
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        };
+
+        return new StreamedResponse($callback, 200, $headers);
     }
 }

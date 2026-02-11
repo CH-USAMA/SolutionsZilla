@@ -1,60 +1,78 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Patients') }}
-            </h2>
-            <a href="{{ route('patients.create') }}"
-                class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500 transition">
-                Add Patient
-            </a>
-        </div>
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight uppercase tracking-wider">
+            {{ __('Patients') }}
+        </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="card">
-                <div class="card-body">
-
-                    <div class="mb-4">
-                        <label for="gender_filter" class="mr-2 font-bold text-gray-700">Filter Gender:</label>
+    <div class="py-12 bg-gray-50 min-h-screen">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
+                <!-- Card Header -->
+                <div
+                    class="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4 bg-gray-50/50">
+                    <h2 class="text-lg font-bold text-gray-900">All Patients</h2>
+                    <div class="flex items-center gap-3">
                         <select id="gender_filter"
-                            class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                            <option value="">All</option>
+                            class="text-xs border-gray-200 rounded-lg py-1.5 px-3 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">All Genders</option>
                             <option value="male">Male</option>
                             <option value="female">Female</option>
                             <option value="other">Other</option>
                         </select>
+                        <button id="export_csv"
+                            class="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold hover:bg-green-100 border border-green-200 transition">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z">
+                                </path>
+                            </svg>
+                            Export CSV
+                        </button>
+                        <a href="{{ route('patients.create') }}"
+                            class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Patient
+                        </a>
                     </div>
+                </div>
 
-                    <div class="overflow-x-auto">
-                        <table id="patients-table" class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table id="patients-table" class="min-w-full divide-y divide-gray-100">
+                        <thead class="bg-gray-50/80">
+                            <tr>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    No</th>
+                                @if(Auth::user()->isSuperAdmin())
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        No</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Name</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Phone</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Age/Gender</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        History</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
-                    </div>
+                                        class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        Clinic</th>
+                                @endif
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Name</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Phone</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Age/Gender</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    History</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -78,6 +96,9 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    @if(Auth::user()->isSuperAdmin())
+                        { data: 'clinic_name', name: 'clinic_name' },
+                    @endif
                     { data: 'name', name: 'name' },
                     { data: 'phone', name: 'phone' },
                     { data: 'age_gender', name: 'age_gender', searchable: false },
@@ -89,16 +110,19 @@
             $('#gender_filter').change(function () {
                 table.draw();
             });
+
+            $('#export_csv').click(function () {
+                var params = '?export=csv&gender=' + ($('#gender_filter').val() || '');
+                window.location.href = "{{ route('patients.index') }}" + params;
+            });
         });
 
-        // Function to show medical history in modal
         function showHistory(history, patientName) {
             document.getElementById('historyPatientName').textContent = patientName;
             document.getElementById('historyContent').textContent = history;
             document.getElementById('historyModal').classList.remove('hidden');
         }
 
-        // Function to close modal
         function closeHistoryModal() {
             document.getElementById('historyModal').classList.add('hidden');
         }
@@ -108,27 +132,20 @@
     <div id="historyModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog"
         aria-modal="true">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <!-- Background overlay -->
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeHistoryModal()"></div>
-
-            <!-- Modal panel -->
             <div
-                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                Medical History - <span id="historyPatientName"></span>
-                            </h3>
-                            <div class="mt-4">
-                                <p class="text-sm text-gray-700 whitespace-pre-wrap" id="historyContent"></p>
-                            </div>
-                        </div>
+                class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
+                <div class="bg-white px-6 pt-6 pb-4">
+                    <h3 class="text-lg font-bold text-gray-900" id="modal-title">
+                        Medical History — <span id="historyPatientName"></span>
+                    </h3>
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-700 whitespace-pre-wrap" id="historyContent"></p>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <div class="bg-gray-50 px-6 py-3 flex justify-end">
                     <button type="button" onclick="closeHistoryModal()"
-                        class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 border border-gray-200 transition">
                         Close
                     </button>
                 </div>

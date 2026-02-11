@@ -5,11 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\BelongsToClinic;
 use Carbon\Carbon;
+
+use App\Traits\LogsActivity;
 
 class Appointment extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, BelongsToClinic, LogsActivity;
 
     protected $fillable = [
         'clinic_id',
@@ -29,6 +32,7 @@ class Appointment extends Model
 
     protected $casts = [
         'appointment_date' => 'date',
+        'appointment_time' => 'datetime',
         'whatsapp_reminder_sent' => 'boolean',
         'sms_reminder_sent' => 'boolean',
         'whatsapp_reminder_sent_at' => 'datetime',
@@ -36,13 +40,7 @@ class Appointment extends Model
         'confirmed_at' => 'datetime',
     ];
 
-    /**
-     * Get the clinic that owns the appointment
-     */
-    public function clinic()
-    {
-        return $this->belongsTo(Clinic::class);
-    }
+    // Relationship inherited from BelongsToClinic trait
 
     /**
      * Get the patient for this appointment
@@ -133,7 +131,10 @@ class Appointment extends Model
      */
     public function getAppointmentDateTimeAttribute()
     {
-        return Carbon::parse($this->appointment_date->format('Y-m-d') . ' ' . $this->appointment_time);
+        $date = $this->appointment_date instanceof Carbon ? $this->appointment_date : Carbon::parse($this->appointment_date);
+        $time = $this->appointment_time instanceof Carbon ? $this->appointment_time : Carbon::parse($this->appointment_time);
+
+        return $date->setTimeFrom($time);
     }
 
     /**

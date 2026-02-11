@@ -2,73 +2,75 @@
 
 namespace App\Services;
 
-use App\Models\Appointment;
+use App\Models\Clinic;
+use App\Models\Patient;
+use App\Models\SmsLog;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class SmsService
 {
-    /**
-     * Send SMS reminder for appointment
-     * 
-     * @param Appointment $appointment
-     * @return bool
-     */
-    public function sendAppointmentReminder(Appointment $appointment): bool
-    {
-        try {
-            $message = $this->buildReminderMessage($appointment);
-            $phone = $this->formatPhoneNumber($appointment->patient->phone);
+    protected $sid;
+    protected $token;
+    protected $from;
 
-            // TODO: Integrate with actual SMS API (e.g., Twilio, Eocean, etc.)
-            // For now, we'll just log the message
-            Log::info('SMS Reminder', [
-                'phone' => $phone,
+    public function __construct()
+    {
+        $this->sid = config('services.twilio.sid');
+        $this->token = config('services.twilio.token');
+        $this->from = config('services.twilio.from');
+    }
+
+    /**
+     * Send an SMS to a patient.
+     */
+    public function sendSms(Patient $patient, string $message, Clinic $clinic)
+    {
+        // 1. Check Quota (via SubscriptionService - integrated separately)
+
+        // 2. Prepare Payload
+        $phone = $patient->phone;
+        if (!str_starts_with($phone, '+')) {
+            $phone = '+92' . ltrim($phone, '0'); // Default to Pakistan if no country code
+        }
+
+        try {
+            $response = Http::withBasicAuth($this->sid, $this->token)
+                ->asForm()
+                ->post("https://api.twilio.com/2010-04-01/Accounts/{$this->sid}/Messages.json", [
+                    'To' => $phone,
+                    'From' => $this->from,
+                    'Body' => $message,
+                ]);
+
+            $data = $response->json();
+
+            // 3. Log Activity
+            SmsLog::create([
+                'clinic_id' => $clinic->id,
+                'patient_id' => $patient->id,
+                'phone_number' => $phone,
                 'message' => $message,
-                'appointment_id' => $appointment->id,
+                'status' => $response->successful() ? 'sent' : 'failed',
+                'provider_sid' => $data['sid'] ?? null,
+                'provider_response' => $data,
             ]);
 
-            // Simulate successful sending
-            return true;
+            return $response->successful();
 
         } catch (\Exception $e) {
-            Log::error('SMS sending failed', [
-                'appointment_id' => $appointment->id,
-                'error' => $e->getMessage(),
+            Log::error("SMS Sending Failed: " . $e->getMessage());
+
+            SmsLog::create([
+                'clinic_id' => $clinic->id,
+                'patient_id' => $patient->id,
+                'phone_number' => $phone,
+                'message' => $message,
+                'status' => 'error',
+                'provider_response' => ['error' => $e->getMessage()],
             ]);
 
             return false;
         }
-    }
-
-    /**
-     * Build reminder message (shorter for SMS)
-     */
-    private function buildReminderMessage(Appointment $appointment): string
-    {
-        $clinicName = $appointment->clinic->name;
-        $doctorName = $appointment->doctor->name;
-        $time = date('h:i A', strtotime($appointment->appointment_time));
-
-        return "Reminder: Your appointment with Dr. {$doctorName} at {$clinicName} is in 2 hours at {$time}. Please arrive on time.";
-    }
-
-    /**
-     * Format phone number for SMS (Pakistan format)
-     */
-    private function formatPhoneNumber(string $phone): string
-    {
-        // Remove all non-numeric characters
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-
-        // Add Pakistan country code if not present
-        if (!str_starts_with($phone, '92')) {
-            if (str_starts_with($phone, '0')) {
-                $phone = '92' . substr($phone, 1);
-            } else {
-                $phone = '92' . $phone;
-            }
-        }
-
-        return $phone;
     }
 }

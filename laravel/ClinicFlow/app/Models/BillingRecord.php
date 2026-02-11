@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToClinic;
 
 class BillingRecord extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToClinic;
 
     protected $fillable = [
         'clinic_id',
@@ -27,13 +28,7 @@ class BillingRecord extends Model
         'paid_date' => 'date',
     ];
 
-    /**
-     * Get the clinic that owns the billing record
-     */
-    public function clinic()
-    {
-        return $this->belongsTo(Clinic::class);
-    }
+    // Relationship inherited from BelongsToClinic trait
 
     /**
      * Scope a query to only include records for the current clinic

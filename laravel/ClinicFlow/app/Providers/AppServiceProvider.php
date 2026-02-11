@@ -20,6 +20,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Authorize Super Admins for all actions
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+            return $user->isSuperAdmin() ? true : null;
+        });
+
         // Global HTTP client configuration for ngrok compatibility
         Http::globalRequestMiddleware(function ($request) {
             return $request->withHeader('ngrok-skip-browser-warning', 'true')

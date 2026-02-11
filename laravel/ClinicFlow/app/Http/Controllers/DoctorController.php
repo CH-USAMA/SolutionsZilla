@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreDoctorRequest;
 use App\Http\Requests\UpdateDoctorRequest;
 use App\Models\Doctor;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DoctorController extends Controller
 {
@@ -14,9 +17,13 @@ class DoctorController extends Controller
      */
     public function index(Request $request)
     {
+        if ($request->has('export')) {
+            return $this->exportCsv($request);
+        }
+
         if ($request->ajax()) {
             $user = auth()->user();
-            $query = Doctor::query();
+            $query = Doctor::query()->with('clinic');
 
             if ($user->isSuperAdmin()) {
                 // Super Admin sees all doctors
@@ -29,10 +36,11 @@ class DoctorController extends Controller
                 $query->forClinic($user->clinic_id)->latest();
             }
 
-            $doctors = $query; // DataTables accepts query builder
-
-            return \Yajra\DataTables\Facades\DataTables::of($doctors)
+            return \Yajra\DataTables\Facades\DataTables::of($query)
                 ->addIndexColumn()
+                ->addColumn('clinic_name', function ($row) {
+                    return $row->clinic ? $row->clinic->name : '<span class="text-gray-400">System</span>';
+                })
                 ->addColumn('action', function ($row) {
                     $editUrl = route('doctors.edit', $row->id);
                     $btn = '<a href="' . $editUrl . '" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>';
@@ -44,7 +52,7 @@ class DoctorController extends Controller
                     }
                     return '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Unavailable</span>';
                 })
-                ->rawColumns(['action', 'is_available'])
+                ->rawColumns(['clinic_name', 'action', 'is_available'])
                 ->make(true);
         }
 
@@ -69,13 +77,35 @@ class DoctorController extends Controller
         $validated = $request->validated();
         $validated['is_available'] = $request->has('is_available');
 
+        // Require email and password for login
+        if (empty($validated['email'])) {
+            return back()->withInput()->withErrors(['email' => 'Email is required for doctor login account.']);
+        }
+
+        $password = $request->input('password', 'password123'); // Default or input
+
+        // Create User Account
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($password),
+            'role' => User::ROLE_DOCTOR,
+            'clinic_id' => $clinicId,
+            'phone' => $validated['phone'] ?? null,
+            'is_active' => true,
+        ]);
+
+        // Create Doctor Profile
         Doctor::create(array_merge(
             $validated,
-            ['clinic_id' => $clinicId]
+            [
+                'clinic_id' => $clinicId,
+                'user_id' => $user->id,
+            ]
         ));
 
         return redirect()->route('doctors.index')
-            ->with('success', 'Doctor created successfully.');
+            ->with('success', 'Doctor and User Account created successfully. Default password: ' . $password);
     }
 
     /**
@@ -130,5 +160,70 @@ class DoctorController extends Controller
 
         return redirect()->route('doctors.index')
             ->with('success', 'Doctor deleted successfully.');
+    }
+
+    /**
+     * Export doctors to CSV
+     */
+    private function exportCsv(Request $request)
+    {
+        $user = auth()->user();
+        $query = Doctor::query()->with('clinic');
+
+        if ($user->isSuperAdmin()) {
+            $query->latest();
+        } elseif ($user->isDoctor()) {
+            $query->where('user_id', $user->id);
+        } else {
+            $query->forClinic($user->clinic_id)->latest();
+        }
+
+        if ($request->status !== null) {
+            // Note: status comes as string "1" or "0" from the filter
+            if ($request->status === '1')
+                $query->where('is_available', true);
+            if ($request->status === '0')
+                $query->where('is_available', false);
+        }
+
+        $doctors = $query->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="doctors_export_' . date('Y-m-d_H-i') . '.csv"',
+        ];
+
+        $callback = function () use ($doctors, $user) {
+            $handle = fopen('php://output', 'w');
+
+            // CSV Header
+            $columns = ['ID', 'Name', 'Specialization', 'Phone', 'Email', 'Status', 'Created At'];
+            if ($user->isSuperAdmin()) {
+                array_splice($columns, 1, 0, 'Clinic');
+            }
+            fputcsv($handle, $columns);
+
+            foreach ($doctors as $doctor) {
+                $row = [
+                    $doctor->id,
+                    $doctor->name,
+                    $doctor->specialization,
+                    $doctor->phone,
+                    $doctor->email,
+                    $doctor->is_available ? 'Available' : 'Unavailable',
+                    $doctor->created_at->format('Y-m-d H:i:s'),
+                ];
+
+                if ($user->isSuperAdmin()) {
+                    array_splice($row, 1, 0, $doctor->clinic->name ?? 'System');
+                }
+
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        };
+
+        return new StreamedResponse($callback, 200, $headers);
     }
 }
