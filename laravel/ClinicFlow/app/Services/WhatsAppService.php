@@ -91,6 +91,8 @@ class WhatsAppService
         try {
             // Call Meta WhatsApp Cloud API
             $response = Http::withToken($settings->access_token)
+                ->withHeaders(['ngrok-skip-browser-warning' => 'true'])
+                ->withUserAgent('ClinicFlow-WhatsApp/1.0')
                 ->post("https://graph.facebook.com/v20.0/{$settings->phone_number_id}/messages", $payload);
 
             if ($response->successful()) {
@@ -209,8 +211,8 @@ class WhatsAppService
         $clinicName = $appointment->clinic->name;
         $patientName = $appointment->patient->name;
         $doctorName = $appointment->doctor->name;
-        $date = $appointment->appointment_date->format('d M Y');
-        $time = date('h:i A', strtotime($appointment->appointment_time));
+        $date = \Carbon\Carbon::parse($appointment->appointment_date)->format('d M Y');
+        $time = \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A');
 
         $replace = [
             '{clinic_name}' => $clinicName,

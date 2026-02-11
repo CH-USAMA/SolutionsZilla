@@ -9,7 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Schedule WhatsApp reminders (24 hours before appointment)
-Schedule::command('reminders:whatsapp')->hourly();
+Schedule::command('reminders:whatsapp')->everySecond();
 
 // Schedule SMS reminders (2 hours before appointment)
 Schedule::command('reminders:sms')->everyFifteenMinutes();

@@ -14,6 +14,8 @@ class WhatsAppWebhookController extends Controller
      */
     public function handle(Request $request)
     {
+        Log::info('WhatsApp Webhook received', ['payload' => $request->all()]);
+
         try {
             // Meta sends verification challenge on webhook setup
             if ($request->has('hub_mode') && $request->hub_mode === 'subscribe') {
@@ -23,16 +25,24 @@ class WhatsAppWebhookController extends Controller
                 return response('Forbidden', 403);
             }
 
-            // Parse incoming message
-            $entry = $request->input('entry.0');
+            // Parse incoming message safely
+            $entry = $request->input('entry.0', []);
             $changes = $entry['changes'][0] ?? null;
+            if (!$changes) {
+                return response()->json(['status' => 'no_changes']);
+            }
+
             $value = $changes['value'] ?? null;
+            if (!$value) {
+                return response()->json(['status' => 'no_value']);
+            }
 
             // Get the Phone Number ID that received this message for multi-tenancy
-            $metadata = $value['metadata'] ?? null;
+            $metadata = $value['metadata'] ?? [];
             $phoneNumberId = $metadata['phone_number_id'] ?? null;
 
             if (!$phoneNumberId) {
+                Log::warning('WhatsApp Webhook: No phone_number_id found in metadata');
                 return response()->json(['status' => 'no_phone_id']);
             }
 
@@ -41,6 +51,10 @@ class WhatsAppWebhookController extends Controller
             $clinicId = $setting ? $setting->clinic_id : null;
 
             $messages = $value['messages'] ?? [];
+            if (empty($messages)) {
+                // Could be a status update (delivered/read), which we don't handle yet
+                return response()->json(['status' => 'no_messages']);
+            }
 
             foreach ($messages as $message) {
                 $phone = $message['from'] ?? null;
@@ -51,13 +65,17 @@ class WhatsAppWebhookController extends Controller
                 }
 
                 // Log incoming message
-                WhatsappLog::create([
-                    'clinic_id' => $clinicId,
-                    'direction' => 'incoming',
-                    'phone' => $phone,
-                    'payload' => $message,
-                    'status' => 'received',
-                ]);
+                try {
+                    WhatsappLog::create([
+                        'clinic_id' => $clinicId,
+                        'direction' => 'incoming',
+                        'phone' => $phone,
+                        'payload' => $message,
+                        'status' => 'received',
+                    ]);
+                } catch (\Exception $logError) {
+                    Log::error('Failed to log WhatsApp message', ['error' => $logError->getMessage()]);
+                }
 
                 // Check for confirmation keywords
                 if ($clinicId) {
@@ -68,9 +86,9 @@ class WhatsAppWebhookController extends Controller
             return response()->json(['status' => 'ok']);
 
         } catch (\Exception $e) {
-            Log::error('WhatsApp webhook error', [
+            Log::error('WhatsApp webhook fatal error', [
                 'error' => $e->getMessage(),
-                'payload' => $request->all(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json(['error' => 'Internal error'], 500);

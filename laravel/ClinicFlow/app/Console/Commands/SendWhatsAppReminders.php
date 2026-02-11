@@ -39,7 +39,7 @@ class SendWhatsAppReminders extends Command
             $this->info("Processing Clinic: {$clinic->name} (Reminders: {$hours}h before)");
 
             $targetTime = \Carbon\Carbon::now()->addHours($hours);
-
+            // dd($targetTime->toDateString(), $targetTime->copy()->subMinutes(30)->toTimeString(), $targetTime->copy()->addMinutes(30)->toTimeString());
             // Scope logic directly here for dynamic hours
             $appointments = Appointment::where('clinic_id', $clinic->id)
                 ->where('whatsapp_reminder_sent', false)

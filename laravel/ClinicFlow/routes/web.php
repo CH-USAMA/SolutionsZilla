@@ -15,7 +15,7 @@ Route::get('/', function () {
 });
 
 // WhatsApp Webhook (no auth required - Meta calls this)
-Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle'])->name('whatsapp.webhook');
+Route::match(['get', 'post'], '/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle'])->name('whatsapp.webhook');
 
 
 Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
