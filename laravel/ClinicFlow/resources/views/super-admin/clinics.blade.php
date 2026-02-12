@@ -9,7 +9,17 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between mb-8">
                 <h1 class="text-2xl font-bold text-gray-900">All Clinics</h1>
-                <span class="text-sm text-gray-500">{{ $clinics->count() }} clinics registered</span>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-500">{{ $clinics->count() }} clinics registered</span>
+                    <a href="{{ route('super-admin.clinics.create') }}"
+                        class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-bold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4">
+                            </path>
+                        </svg>
+                        Add New Clinic
+                    </a>
+                </div>
             </div>
 
             @if(session('success'))
@@ -59,7 +69,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         @if($clinic->plan)
                                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold
-                                                                                {{ $clinic->plan->slug === 'testing' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                                                                                                {{ $clinic->plan->slug === 'testing' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                                             ($clinic->plan->slug === 'pro' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
                                                 ($clinic->plan->slug === 'basic' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
                                                     'bg-gray-50 text-gray-600 border border-gray-200')) }}">
@@ -70,13 +80,17 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 text-center text-sm font-bold text-gray-700">
-                                        {{ $clinic->users_count }}</td>
+                                        {{ $clinic->users_count }}
+                                    </td>
                                     <td class="px-6 py-4 text-center text-sm font-bold text-gray-700">
-                                        {{ $clinic->doctors_count }}</td>
+                                        {{ $clinic->doctors_count }}
+                                    </td>
                                     <td class="px-6 py-4 text-center text-sm font-bold text-gray-700">
-                                        {{ $clinic->patients_count }}</td>
+                                        {{ $clinic->patients_count }}
+                                    </td>
                                     <td class="px-6 py-4 text-center text-sm font-bold text-blue-600">
-                                        {{ $clinic->appointments_count }}</td>
+                                        {{ $clinic->appointments_count }}
+                                    </td>
                                     <td class="px-6 py-4 text-center">
                                         @if($clinic->subscription_status === 'active')
                                             <span

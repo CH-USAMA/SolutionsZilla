@@ -28,6 +28,23 @@
                         {{ __('Reports') }}
                     </x-nav-link>
 
+                    @if(Auth::user()->isClinicAdmin())
+                        <x-nav-link :href="route('staff.index')" :active="request()->routeIs('staff.*')">
+                            {{ __('Staff') }}
+                        </x-nav-link>
+                    @endif
+
+                    @if(Auth::user()->isSuperAdmin())
+                        <x-nav-link :href="route('super-admin.clinics.index')"
+                            :active="request()->routeIs('super-admin.clinics.*')">
+                            {{ __('Clinics') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('super-admin.users.index')"
+                            :active="request()->routeIs('super-admin.users.*')">
+                            {{ __('Users') }}
+                        </x-nav-link>
+                    @endif
+
                     <!-- WhatsApp Dropdown -->
                     <div class="hidden sm:flex sm:items-center sm:ms-4">
                         <x-dropdown align="left" width="48">

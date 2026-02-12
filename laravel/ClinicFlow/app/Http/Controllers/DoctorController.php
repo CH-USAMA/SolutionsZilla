@@ -143,6 +143,17 @@ class DoctorController extends Controller
         $validated = $request->validated();
         $validated['is_available'] = $request->has('is_available');
 
+        // Update User Password if provided
+        if ($request->filled('password') && $doctor->user) {
+            $doctor->user->update([
+                'password' => Hash::make($request->password)
+            ]);
+        }
+
+        // Remove password from doctor model update
+        unset($validated['password']);
+        unset($validated['password_confirmation']);
+
         $doctor->update($validated);
 
         return redirect()->route('doctors.index')

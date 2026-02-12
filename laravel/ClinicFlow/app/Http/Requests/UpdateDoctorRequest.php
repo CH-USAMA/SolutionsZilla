@@ -29,6 +29,7 @@ class UpdateDoctorRequest extends FormRequest
             'qualifications' => ['nullable', 'string'],
             'consultation_fee' => ['required', 'numeric', 'min:0'],
             'is_available' => ['boolean'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ];
     }
 }

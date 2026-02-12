@@ -57,6 +57,24 @@
                             <x-input-error :messages="$errors->get('qualifications')" class="mt-2" />
                         </div>
 
+                        <div class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                            <h3 class="text-sm font-bold text-gray-700 mb-3">Change Password <span
+                                    class="text-xs font-normal text-gray-400">(Optional)</span></h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <x-input-label for="password" value="New Password" />
+                                    <x-text-input id="password" class="block mt-1 w-full" type="password"
+                                        name="password" autocomplete="new-password" />
+                                    <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                                </div>
+                                <div>
+                                    <x-input-label for="password_confirmation" value="Confirm New Password" />
+                                    <x-text-input id="password_confirmation" class="block mt-1 w-full" type="password"
+                                        name="password_confirmation" />
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="block mt-4">
                             <label for="is_available" class="inline-flex items-center">
                                 <input id="is_available" type="checkbox"
