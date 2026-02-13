@@ -6,7 +6,7 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" class="font-bold text-xl text-blue-600">
-                        Solution Zilla
+                        SolutionsZilla
                     </a>
                 </div>
 
