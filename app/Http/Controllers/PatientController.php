@@ -87,7 +87,8 @@ class PatientController extends Controller
      */
     public function create()
     {
-        return view('patients.create');
+        $clinics = auth()->user()->isSuperAdmin() ? \App\Models\Clinic::all() : [];
+        return view('patients.create', compact('clinics'));
     }
 
     /**
@@ -95,7 +96,7 @@ class PatientController extends Controller
      */
     public function store(Request $request)
     {
-        $clinic = auth()->user()->clinic;
+        $user = auth()->user();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -105,7 +106,11 @@ class PatientController extends Controller
             'date_of_birth' => ['nullable', 'date'],
             'address' => ['nullable', 'string'],
             'medical_history' => ['nullable', 'string'],
+            'clinic_id' => [Rule::requiredIf($user->isSuperAdmin()), 'exists:clinics,id'],
         ]);
+
+        $clinicId = $user->isSuperAdmin() ? $validated['clinic_id'] : $user->clinic_id;
+        $clinic = \App\Models\Clinic::findOrFail($clinicId);
 
         $this->patientService->getOrCreateByPhone($validated['phone'], $validated['name'], $clinic, $validated);
 

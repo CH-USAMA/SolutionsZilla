@@ -12,6 +12,22 @@
                     <form method="POST" action="{{ route('doctors.store') }}">
                         @csrf
 
+                        @if(auth()->user()->isSuperAdmin())
+                            <div class="mb-4">
+                                <x-input-label for="clinic_id" value="Clinic" />
+                                <select name="clinic_id" id="clinic_id"
+                                    class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                    required>
+                                    <option value="">Select Clinic</option>
+                                    @foreach($clinics as $clinic)
+                                        <option value="{{ $clinic->id }}" {{ old('clinic_id') == $clinic->id ? 'selected' : '' }}>
+                                            {{ $clinic->name }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('clinic_id')" class="mt-2" />
+                            </div>
+                        @endif
+
                         <div>
                             <x-input-label for="name" value="Name" />
                             <x-text-input id="name" class="block mt-1 w-full" type="text" name="name"

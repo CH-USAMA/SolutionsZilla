@@ -64,7 +64,8 @@ class DoctorController extends Controller
      */
     public function create()
     {
-        return view('doctors.create');
+        $clinics = auth()->user()->isSuperAdmin() ? \App\Models\Clinic::all() : [];
+        return view('doctors.create', compact('clinics'));
     }
 
     /**
@@ -72,7 +73,12 @@ class DoctorController extends Controller
      */
     public function store(StoreDoctorRequest $request)
     {
-        $clinicId = auth()->user()->clinic_id;
+        $user = auth()->user();
+        $clinicId = $user->isSuperAdmin() ? $request->clinic_id : $user->clinic_id;
+
+        if ($user->isSuperAdmin() && !$clinicId) {
+            return back()->withInput()->withErrors(['clinic_id' => 'Clinic is required for Super Admin.']);
+        }
 
         $validated = $request->validated();
         $validated['is_available'] = $request->has('is_available');
@@ -85,7 +91,7 @@ class DoctorController extends Controller
         $password = $request->input('password', 'password123'); // Default or input
 
         // Create User Account
-        $user = User::create([
+        $doctorUser = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($password),
@@ -100,7 +106,7 @@ class DoctorController extends Controller
             $validated,
             [
                 'clinic_id' => $clinicId,
-                'user_id' => $user->id,
+                'user_id' => $doctorUser->id,
             ]
         ));
 
