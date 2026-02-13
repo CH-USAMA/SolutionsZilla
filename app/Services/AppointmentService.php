@@ -34,7 +34,7 @@ class AppointmentService
                 [
                     'name' => $data['name'],
                     'email' => $data['email'] ?? null,
-                    'gender' => $data['gender'] ?? 'unknown',
+                    'gender' => $data['gender'] ?? null,
                 ]
             );
 
@@ -56,7 +56,7 @@ class AppointmentService
                 'doctor_id' => $data['doctor_id'],
                 'appointment_date' => $data['appointment_date'],
                 'appointment_time' => $data['appointment_time'],
-                'reason' => $data['reason'] ?? null,
+                'notes' => $data['reason'] ?? null,
                 'status' => 'booked',
             ]);
         });
