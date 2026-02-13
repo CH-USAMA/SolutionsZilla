@@ -141,7 +141,13 @@ class AppointmentController extends Controller
     public function store(StoreAppointmentRequest $request)
     {
         try {
-            $clinic = auth()->user()->clinic;
+            $doctor = Doctor::findOrFail($request->doctor_id);
+            $clinic = $doctor->clinic;
+
+            // Optional: Ensure Clinic Admin is booking for their own clinic
+            if (!auth()->user()->isSuperAdmin() && auth()->user()->clinic_id !== $clinic->id) {
+                abort(403, 'Unauthorized action.');
+            }
 
             $data = [
                 'name' => $request->patient_name,
