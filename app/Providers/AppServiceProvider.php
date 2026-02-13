@@ -30,5 +30,9 @@ class AppServiceProvider extends ServiceProvider
             return $request->withHeader('ngrok-skip-browser-warning', 'true')
                 ->withHeader('User-Agent', 'ClinicFlow-App/1.0');
         });
+
+        if (config('app.env') !== 'local' || str_contains(config('app.url'), 'https')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
     }
 }
