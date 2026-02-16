@@ -69,7 +69,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         @if($clinic->plan)
                                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold
-                                                                                                                {{ $clinic->plan->slug === 'testing' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                                                                                                                                {{ $clinic->plan->slug === 'testing' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                                             ($clinic->plan->slug === 'pro' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
                                                 ($clinic->plan->slug === 'basic' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
                                                     'bg-gray-50 text-gray-600 border border-gray-200')) }}">
@@ -92,33 +92,56 @@
                                         {{ $clinic->appointments_count }}
                                     </td>
                                     <td class="px-6 py-4 text-center">
-                                        @if($clinic->subscription_status === 'active')
-                                            <span
-                                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700">Active</span>
-                                        @else
-                                            <span
-                                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-600">{{ ucfirst($clinic->subscription_status ?? 'N/A') }}</span>
-                                        @endif
+                                        <div class="flex flex-col items-center gap-1">
+                                            @if($clinic->is_active)
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700">Active</span>
+                                            @else
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">Inactive</span>
+                                            @endif
+
+                                            <div class="mt-1">
+                                                @if($clinic->subscription_status === 'active')
+                                                    <span class="text-[10px] font-bold text-blue-500 uppercase">Paid</span>
+                                                @else
+                                                    <span
+                                                        class="text-[10px] font-bold text-gray-400 uppercase">{{ $clinic->subscription_status ?? 'No Sub' }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
-                                        <form action="{{ route('super-admin.clinics.update-plan', $clinic) }}" method="POST"
-                                            class="inline-flex items-center gap-2">
-                                            @csrf
-                                            @method('PATCH')
-                                            <select name="plan_id"
-                                                class="text-xs border-gray-200 rounded-lg py-1 px-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                                <option value="">— No Plan —</option>
-                                                @foreach($plans as $plan)
-                                                    <option value="{{ $plan->id }}" {{ $clinic->plan_id == $plan->id ? 'selected' : '' }}>
-                                                        {{ $plan->name }} (${{ number_format($plan->price, 0) }})
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <button type="submit"
-                                                class="inline-flex items-center px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 border border-indigo-200 transition">
-                                                Apply
-                                            </button>
-                                        </form>
+                                        <div class="flex flex-col gap-2 items-center">
+                                            <form action="{{ route('super-admin.clinics.update-plan', $clinic) }}"
+                                                method="POST" class="inline-flex items-center gap-2">
+                                                @csrf
+                                                @method('PATCH')
+                                                <select name="plan_id"
+                                                    class="text-xs border-gray-200 rounded-lg py-1 px-2 focus:ring-indigo-500 focus:border-indigo-500 w-32">
+                                                    <option value="">— No Plan —</option>
+                                                    @foreach($plans as $plan)
+                                                        <option value="{{ $plan->id }}" {{ $clinic->plan_id == $plan->id ? 'selected' : '' }}>
+                                                            {{ $plan->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <button type="submit"
+                                                    class="inline-flex items-center px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 border border-indigo-200 transition">
+                                                    Apply
+                                                </button>
+                                            </form>
+
+                                            <form action="{{ route('super-admin.clinics.toggle-status', $clinic) }}"
+                                                method="POST" class="inline">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit"
+                                                    class="text-xs font-bold transition-colors {{ $clinic->is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800' }}">
+                                                    {{ $clinic->is_active ? '❌ Deactivate Clinic' : '✅ Activate Clinic' }}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach

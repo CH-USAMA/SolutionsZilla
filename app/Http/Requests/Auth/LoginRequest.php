@@ -49,6 +49,14 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        $user = Auth::user();
+        if ($user->clinic_id && !$user->clinic->is_active && !$user->isSuperAdmin()) {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => 'Your clinic account is inactive. Please contact support.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

@@ -105,4 +105,21 @@ class ClinicManagementController extends Controller
 
         return redirect()->back()->with('success', "Clinic \"{$clinic->name}\" has been assigned to the \"{$planName}\" plan.");
     }
+    /**
+     * Toggle clinic activation status.
+     */
+    public function toggleStatus(Clinic $clinic)
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        $clinic->update([
+            'is_active' => !$clinic->is_active
+        ]);
+
+        $status = $clinic->is_active ? 'activated' : 'deactivated';
+
+        return redirect()->back()->with('success', "Clinic \"{$clinic->name}\" has been {$status}.");
+    }
 }

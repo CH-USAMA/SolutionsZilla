@@ -115,6 +115,7 @@ Route::middleware(['auth', 'role:super_admin'])->group(function () {
     Route::get('/super-admin/clinics/create', [ClinicManagementController::class, 'create'])->name('super-admin.clinics.create');
     Route::post('/super-admin/clinics', [ClinicManagementController::class, 'store'])->name('super-admin.clinics.store');
     Route::patch('/super-admin/clinics/{clinic}/plan', [ClinicManagementController::class, 'updatePlan'])->name('super-admin.clinics.update-plan');
+    Route::patch('/super-admin/clinics/{clinic}/toggle-status', [ClinicManagementController::class, 'toggleStatus'])->name('super-admin.clinics.toggle-status');
 
     // Super Admin User Management
     Route::get('/super-admin/users', [\App\Http\Controllers\UserController::class, 'index'])->name('super-admin.users.index');

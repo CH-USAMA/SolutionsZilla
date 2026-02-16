@@ -33,9 +33,10 @@ class SendWhatsAppReminders extends Command
         $this->info('Checking for appointments needing WhatsApp reminders...');
 
         // Get all clinics with active WhatsApp settings
-        $clinics = Clinic::whereHas('whatsappSettings', function ($q) {
-            $q->where('is_active', true);
-        })->with(['whatsappSettings', 'plan'])->get();
+        $clinics = Clinic::where('is_active', true)
+            ->whereHas('whatsappSettings', function ($q) {
+                $q->where('is_active', true);
+            })->with(['whatsappSettings', 'plan'])->get();
 
         foreach ($clinics as $clinic) {
             /** @var \App\Models\Clinic $clinic */

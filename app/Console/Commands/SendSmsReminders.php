@@ -32,10 +32,11 @@ class SendSmsReminders extends Command
     {
         $this->info('Checking for appointments needing SMS reminders...');
 
-        // Get all clinics with active SMS reminders (reusing whatsappSettings for notification preferences)
-        $clinics = Clinic::whereHas('whatsappSettings', function ($q) {
-            $q->where('is_active', true);
-        })->with(['whatsappSettings'])->get();
+        // Get all clinics with active SMS reminders
+        $clinics = Clinic::where('is_active', true)
+            ->whereHas('whatsappSettings', function ($q) {
+                $q->where('is_active', true);
+            })->with(['whatsappSettings'])->get();
 
         foreach ($clinics as $clinic) {
             /** @var Clinic $clinic */
