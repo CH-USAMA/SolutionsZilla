@@ -3,6 +3,7 @@
 
 $SERVER_IP = "192.168.21.230"
 $SERVER_USER = "root"
+$SERVER_PASS = "hobo123"
 $REMOTE_PATH = "/var/www/html" # Updated per user request
 
 Write-Host "Starting Deployment Process..." -ForegroundColor Cyan
