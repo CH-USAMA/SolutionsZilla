@@ -63,6 +63,14 @@ Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
     Route::post('/whatsapp/settings', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.settings.update');
     Route::get('/whatsapp/logs', [WhatsAppSettingsController::class, 'logs'])->name('whatsapp.logs');
 
+    // WhatsApp Dashboard & Analytics
+    Route::get('/whatsapp/dashboard', [\App\Http\Controllers\WhatsAppDashboardController::class, 'index'])->name('whatsapp.dashboard');
+    Route::get('/api/whatsapp/stats', [\App\Http\Controllers\Api\WhatsAppStatsController::class, 'stats'])->name('api.whatsapp.stats');
+    Route::get('/api/whatsapp/messages', [\App\Http\Controllers\Api\WhatsAppStatsController::class, 'messages'])->name('api.whatsapp.messages');
+
+    // WhatsApp Onboarding
+    Route::post('/whatsapp/onboarding/callback', [\App\Http\Controllers\WhatsAppOnboardingController::class, 'callback'])->name('whatsapp.onboarding.callback');
+
     // SMS Manager
     Route::get('/sms/logs', [\App\Http\Controllers\SmsSettingsController::class, 'logs'])->name('sms.logs');
     Route::post('/whatsapp/test', [WhatsAppSettingsController::class, 'test'])->name('whatsapp.test');

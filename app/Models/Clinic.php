@@ -101,4 +101,28 @@ class Clinic extends Model
     {
         return $this->belongsTo(Plan::class);
     }
+
+    /**
+     * Get all WhatsApp messages for this clinic
+     */
+    public function whatsappMessages()
+    {
+        return $this->hasMany(WhatsAppMessage::class);
+    }
+
+    /**
+     * Get all WhatsApp conversations for this clinic
+     */
+    public function whatsappConversations()
+    {
+        return $this->hasMany(WhatsAppConversation::class);
+    }
+
+    /**
+     * Get all WhatsApp usage records for this clinic
+     */
+    public function whatsappUsage()
+    {
+        return $this->hasMany(WhatsAppUsage::class);
+    }
 }

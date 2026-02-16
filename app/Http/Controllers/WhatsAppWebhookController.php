@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
-use App\Models\WhatsappLog;
+use App\Models\WhatsAppMessage;
+use App\Models\WhatsAppConversation;
+use App\Models\ClinicWhatsappSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class WhatsAppWebhookController extends Controller
 {
@@ -14,91 +17,63 @@ class WhatsAppWebhookController extends Controller
      */
     public function handle(Request $request)
     {
-        Log::info('WhatsApp Webhook received', ['payload' => $request->all()]);
-
         // 1. Signature Verification (Production Security)
         if (!$this->validateSignature($request)) {
             Log::warning('WhatsApp Webhook: Invalid signature', [
+                'ip' => $request->ip(),
                 'header' => $request->header('X-Hub-Signature-256'),
-                'body' => $request->getContent(),
             ]);
             return response('Unauthorized', 401);
         }
 
-        try {
-            // Meta sends verification challenge on webhook setup
-            if ($request->has('hub_mode') && $request->hub_mode === 'subscribe') {
-                if ($request->hub_verify_token === config('services.whatsapp.verify_token')) {
-                    return response($request->hub_challenge, 200);
-                }
-                return response('Forbidden', 403);
+        // 2. Verification Challenge (GET)
+        if ($request->isMethod('get') && $request->hub_mode === 'subscribe') {
+            if ($request->hub_verify_token === config('services.whatsapp.verify_token')) {
+                return response($request->hub_challenge, 200);
             }
+            return response('Forbidden', 403);
+        }
 
-            // Parse incoming message safely
+        // 3. Handle Events (POST)
+        try {
             $entry = $request->input('entry.0', []);
             $changes = $entry['changes'][0] ?? null;
-            if (!$changes) {
-                return response()->json(['status' => 'no_changes']);
+
+            if (!$changes || ($changes['field'] !== 'messages')) {
+                return response()->json(['status' => 'ignored']);
             }
 
-            $value = $changes['value'] ?? null;
-            if (!$value) {
-                return response()->json(['status' => 'no_value']);
-            }
-
-            // Get the Phone Number ID that received this message for multi-tenancy
+            $value = $changes['value'] ?? [];
             $metadata = $value['metadata'] ?? [];
             $phoneNumberId = $metadata['phone_number_id'] ?? null;
 
             if (!$phoneNumberId) {
-                Log::warning('WhatsApp Webhook: No phone_number_id found in metadata');
                 return response()->json(['status' => 'no_phone_id']);
             }
 
-            // Find the clinic associated with this Phone Number ID (Global Scope bypassed for discovery)
-            $setting = \App\Models\ClinicWhatsappSetting::withoutGlobalScopes()
+            // Find Tenant
+            $setting = ClinicWhatsappSetting::withoutGlobalScopes()
                 ->where('phone_number_id', $phoneNumberId)
                 ->first();
 
-            $clinicId = $setting ? $setting->clinic_id : null;
-
-            $messages = $value['messages'] ?? [];
-            if (empty($messages)) {
-                // Could be a status update (delivered/read), which we don't handle yet
-                return response()->json(['status' => 'no_messages']);
+            if (!$setting) {
+                Log::warning("WhatsApp Webhook: Unknown phone_number_id: $phoneNumberId");
+                return response()->json(['status' => 'unknown_tenant']);
             }
 
-            foreach ($messages as $message) {
-                $phone = $message['from'] ?? null;
-                $messageType = $message['type'] ?? null;
+            $clinicId = $setting->clinic_id;
 
-                // Only handle text messages for confirmation
-                if ($messageType !== 'text') {
-                    continue;
+            // Handle Messages
+            if (!empty($value['messages'])) {
+                foreach ($value['messages'] as $message) {
+                    $this->processMessage($clinicId, $message, $metadata);
                 }
+            }
 
-                $messageText = $message['text']['body'] ?? null;
-
-                if (!$phone || !$messageText) {
-                    continue;
-                }
-
-                // Log incoming message (Global Scope will handle clinic_id if auth, but here we set it manually)
-                try {
-                    WhatsappLog::create([
-                        'clinic_id' => $clinicId,
-                        'direction' => 'incoming',
-                        'phone' => $phone,
-                        'payload' => $message,
-                        'status' => 'received',
-                    ]);
-                } catch (\Exception $logError) {
-                    Log::error('Failed to log WhatsApp message', ['error' => $logError->getMessage()]);
-                }
-
-                // Check for confirmation keywords
-                if ($clinicId) {
-                    $this->handleConfirmation($clinicId, $phone, $messageText);
+            // Handle Status Updates (Sent, Delivered, Read)
+            if (!empty($value['statuses'])) {
+                foreach ($value['statuses'] as $status) {
+                    $this->processStatus($clinicId, $status);
                 }
             }
 
@@ -109,9 +84,123 @@ class WhatsAppWebhookController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-
             return response()->json(['error' => 'Internal error'], 500);
         }
+    }
+
+    /**
+     * Process incoming message
+     */
+    private function processMessage($clinicId, $payload, $metadata)
+    {
+        $messageId = $payload['id'];
+        $from = $payload['from'];
+        $type = $payload['type'];
+        $timestamp = isset($payload['timestamp']) ? Carbon::createFromTimestamp($payload['timestamp']) : now();
+
+        // 1. Manage Conversation (24h Window)
+        $conversation = $this->getOrCreateConversation($clinicId, $from, $timestamp);
+
+        // 2. Persist Message
+        WhatsAppMessage::create([
+            'clinic_id' => $clinicId,
+            'message_id' => $messageId,
+            'wamid' => $messageId,
+            'from' => $from,
+            'to' => $metadata['display_phone_number'] ?? '',
+            'type' => $type,
+            'direction' => 'incoming',
+            'body' => $this->extractBody($payload),
+            'status' => 'received',
+            'metadata' => $payload,
+            'conversation_id' => $conversation->conversation_id,
+            'created_at' => $timestamp,
+        ]);
+
+        // 3. Logic: Appointment Confirmation
+        if ($type === 'text') {
+            $this->handleConfirmation($clinicId, $from, $payload['text']['body']);
+        }
+    }
+
+    /**
+     * Process message status update
+     */
+    private function processStatus($clinicId, $payload)
+    {
+        $messageId = $payload['id'];
+        $status = $payload['status']; // sent, delivered, read, failed
+
+        $message = WhatsAppMessage::where('clinic_id', $clinicId)
+            ->where(function ($q) use ($messageId) {
+                $q->where('message_id', $messageId)
+                    ->orWhere('wamid', $messageId);
+            })
+            ->first();
+
+        if ($message) {
+            $message->update([
+                'status' => $status,
+                'metadata' => array_merge($message->metadata ?? [], ['status_update' => $payload]),
+            ]);
+
+            // If we have pricing info in status (conversation billable), update conversation cost?
+            // Meta usually sends pricing in 'pricing' object in status for 'sent' or 'delivered'
+            if (isset($payload['pricing'])) {
+                // Future implementation: Update conversation cost
+            }
+        }
+    }
+
+    /**
+     * Get active conversation or create new
+     */
+    private function getOrCreateConversation($clinicId, $phoneNumber, $timestamp)
+    {
+        // Check for active conversation (started within last 24 hours)
+        $conversation = WhatsAppConversation::where('clinic_id', $clinicId)
+            ->where('phone_number', $phoneNumber)
+            ->where('expires_at', '>', $timestamp)
+            ->latest('started_at')
+            ->first();
+
+        if (!$conversation) {
+            // Start new conversation
+            $conversationId = 'conv_' . uniqid(); // In real implementation, derive from Meta if available
+            $conversation = WhatsAppConversation::create([
+                'clinic_id' => $clinicId,
+                'conversation_id' => $conversationId,
+                'phone_number' => $phoneNumber,
+                'started_at' => $timestamp,
+                'expires_at' => $timestamp->copy()->addHours(24),
+                'last_message_at' => $timestamp,
+                'type' => 'service', // Default to service/user-initiated
+                'category' => 'user_initiated',
+                'message_count' => 1,
+            ]);
+        } else {
+            // Update existing
+            $conversation->update([
+                'last_message_at' => $timestamp,
+                'message_count' => $conversation->message_count + 1,
+            ]);
+        }
+
+        return $conversation;
+    }
+
+    /**
+     * Extract clean body from message payload
+     */
+    private function extractBody($payload)
+    {
+        $type = $payload['type'];
+        return match ($type) {
+            'text' => $payload['text']['body'] ?? '',
+            'button' => $payload['button']['text'] ?? '',
+            'interactive' => $payload['interactive']['button_reply']['title'] ?? ($payload['interactive']['list_reply']['title'] ?? ''),
+            default => "[$type]",
+        };
     }
 
     /**
@@ -120,12 +209,10 @@ class WhatsAppWebhookController extends Controller
     private function validateSignature(Request $request): bool
     {
         $signature = $request->header('X-Hub-Signature-256');
-
-        // If app_secret is not set, we skip validation for now (local dev convenience)
-        // But in production, this should be mandatory
         $appSecret = config('services.whatsapp.app_secret');
+
         if (empty($appSecret)) {
-            return true;
+            return true; // Dev mode
         }
 
         if (!$signature) {
@@ -143,7 +230,6 @@ class WhatsAppWebhookController extends Controller
      */
     private function handleConfirmation(int $clinicId, string $phone, string $messageText)
     {
-        // Expand confirmation keywords (English & Urdu)
         $confirmationKeywords = [
             'yes',
             'ok',
@@ -165,8 +251,8 @@ class WhatsAppWebhookController extends Controller
         ];
 
         $normalizedText = mb_strtolower(trim($messageText));
-
         $isConfirmation = false;
+
         foreach ($confirmationKeywords as $keyword) {
             if (mb_strpos($normalizedText, $keyword) !== false) {
                 $isConfirmation = true;
@@ -178,8 +264,6 @@ class WhatsAppWebhookController extends Controller
             return;
         }
 
-        // Find latest upcoming appointment for this phone number
-        // Bypassing global scope as we are in background process with a specific clinic context
         $appointment = Appointment::withoutGlobalScopes()
             ->where('clinic_id', $clinicId)
             ->whereHas('patient', function ($query) use ($phone) {
@@ -193,7 +277,6 @@ class WhatsAppWebhookController extends Controller
             ->first();
 
         if ($appointment) {
-            // Confirm appointment
             $appointment->update([
                 'confirmed_at' => now(),
                 'status' => 'confirmed',

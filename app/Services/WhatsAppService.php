@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Appointment;
-use App\Models\WhatsappLog;
+use App\Models\WhatsAppMessage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -72,12 +72,18 @@ class WhatsAppService
         ];
 
         // Create log entry (pending)
-        $log = WhatsappLog::create([
+        $log = WhatsAppMessage::create([
             'clinic_id' => $clinicId,
-            'appointment_id' => $appointmentId,
+            'message_id' => 'pending_' . uniqid(),
             'direction' => 'outgoing',
-            'phone' => $phone,
-            'payload' => $payload,
+            'to' => $phone,
+            'from' => $settings->phone_number_id, // We use phone_number_id as sender identifier
+            'type' => 'text',
+            'body' => $params['message'],
+            'metadata' => [
+                'payload' => $payload,
+                'appointment_id' => $appointmentId
+            ],
             'status' => 'pending',
         ]);
 
@@ -89,19 +95,25 @@ class WhatsAppService
                 ->post("https://graph.facebook.com/v20.0/{$settings->phone_number_id}/messages", $payload);
 
             if ($response->successful()) {
+                $responseData = $response->json();
+                $messageId = $responseData['messages'][0]['id'] ?? null;
+
                 // Update log to sent
                 $log->update([
-                    'response' => $response->json(),
+                    'message_id' => $messageId ?? $log->message_id,
                     'status' => 'sent',
+                    'metadata' => array_merge($log->metadata ?? [], ['response' => $responseData]),
                 ]);
 
                 return true;
             } else {
                 // Update log to failed
                 $log->update([
-                    'response' => $response->json(),
                     'status' => 'failed',
-                    'error_message' => $response->body(),
+                    'metadata' => array_merge($log->metadata ?? [], [
+                        'response' => $response->json(),
+                        'error_message' => $response->body()
+                    ]),
                 ]);
 
                 return false;
@@ -111,7 +123,7 @@ class WhatsAppService
             // Update log to failed
             $log->update([
                 'status' => 'failed',
-                'error_message' => $e->getMessage(),
+                'metadata' => array_merge($log->metadata ?? [], ['error_message' => $e->getMessage()]),
             ]);
 
             return false;
@@ -137,13 +149,19 @@ class WhatsAppService
         ];
 
         // Create log entry (pending)
-        $log = WhatsappLog::create([
+        $log = WhatsAppMessage::create([
             'clinic_id' => $clinicId,
-            'appointment_id' => $appointmentId,
+            'message_id' => 'pending_' . uniqid(),
             'direction' => 'outgoing',
-            'phone' => $phone,
-            'template_name' => $templateName,
-            'payload' => $payload,
+            'to' => $phone,
+            'from' => $settings->phone_number_id,
+            'type' => 'template',
+            'body' => "Template: $templateName",
+            'metadata' => [
+                'payload' => $payload,
+                'template_name' => $templateName,
+                'appointment_id' => $appointmentId
+            ],
             'status' => 'pending',
         ]);
 
@@ -153,19 +171,25 @@ class WhatsAppService
                 ->post("https://graph.facebook.com/v20.0/{$settings->phone_number_id}/messages", $payload);
 
             if ($response->successful()) {
+                $responseData = $response->json();
+                $messageId = $responseData['messages'][0]['id'] ?? null;
+
                 // Update log to sent
                 $log->update([
-                    'response' => $response->json(),
+                    'message_id' => $messageId ?? $log->message_id,
                     'status' => 'sent',
+                    'metadata' => array_merge($log->metadata ?? [], ['response' => $responseData]),
                 ]);
 
                 return true;
             } else {
                 // Update log to failed
                 $log->update([
-                    'response' => $response->json(),
                     'status' => 'failed',
-                    'error_message' => $response->body(),
+                    'metadata' => array_merge($log->metadata ?? [], [
+                        'response' => $response->json(),
+                        'error_message' => $response->body()
+                    ]),
                 ]);
 
                 return false;
@@ -175,7 +199,7 @@ class WhatsAppService
             // Update log to failed
             $log->update([
                 'status' => 'failed',
-                'error_message' => $e->getMessage(),
+                'metadata' => array_merge($log->metadata ?? [], ['error_message' => $e->getMessage()]),
             ]);
 
             return false;

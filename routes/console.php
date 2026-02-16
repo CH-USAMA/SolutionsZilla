@@ -16,3 +16,7 @@ Schedule::command('reminders:sms')->everyFifteenMinutes();
 
 // Schedule Daily Database Backups at 2 AM
 Schedule::command('db:backup')->dailyAt('02:00');
+
+// Schedule Monthly Usage Calculation (1st of every month at 1 AM for previous month)
+Schedule::job(new \App\Jobs\CalculateMonthlyUsageJob(now()->subMonth()->month, now()->subMonth()->year))
+    ->monthlyOn(1, '01:00');

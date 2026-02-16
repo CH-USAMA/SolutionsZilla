@@ -12,7 +12,10 @@ class ClinicWhatsappSetting extends Model
     protected $fillable = [
         'clinic_id',
         'phone_number_id',
+        'waba_id',
+        'display_phone_number',
         'access_token',
+        'verify_token',
         'default_template',
         'message_type',
         'custom_message',
