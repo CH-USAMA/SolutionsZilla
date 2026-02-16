@@ -36,11 +36,20 @@ class WhatsAppWebhookController extends Controller
 
         // 3. Handle Events (POST)
         try {
-            $entry = $request->input('entry.0', []);
-            $changes = $entry['changes'][0] ?? null;
+            $payload = $request->all();
+            Log::info('WhatsApp Webhook Payload Received', ['payload' => $payload]);
+
+            // Meta standard structure: entry[0].changes[0]
+            $changes = $request->input('entry.0.changes.0');
+
+            // Fallback for simplified test payloads (like the one provided by user)
+            if (!$changes && $request->has('field') && $request->has('value')) {
+                $changes = $payload;
+            }
 
             if (!$changes || ($changes['field'] !== 'messages')) {
-                return response()->json(['status' => 'ignored']);
+                Log::info('WhatsApp Webhook: Ignored non-message field', ['field' => $changes['field'] ?? 'unknown']);
+                return response()->json(['status' => 'ignored', 'reason' => 'not_messages_field']);
             }
 
             $value = $changes['value'] ?? [];
@@ -48,7 +57,8 @@ class WhatsAppWebhookController extends Controller
             $phoneNumberId = $metadata['phone_number_id'] ?? null;
 
             if (!$phoneNumberId) {
-                return response()->json(['status' => 'no_phone_id']);
+                Log::warning('WhatsApp Webhook: Missing phone_number_id in payload');
+                return response()->json(['status' => 'error', 'message' => 'no_phone_id']);
             }
 
             // Find Tenant
@@ -58,7 +68,7 @@ class WhatsAppWebhookController extends Controller
 
             if (!$setting) {
                 Log::warning("WhatsApp Webhook: Unknown phone_number_id: $phoneNumberId");
-                return response()->json(['status' => 'unknown_tenant']);
+                return response()->json(['status' => 'error', 'message' => 'unknown_phone_id']);
             }
 
             $clinicId = $setting->clinic_id;

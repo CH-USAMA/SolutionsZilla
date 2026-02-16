@@ -92,21 +92,27 @@
                                         {{ $clinic->appointments_count }}
                                     </td>
                                     <td class="px-6 py-4 text-center">
-                                        <div class="flex flex-col items-center gap-1">
-                                            @if($clinic->is_active)
-                                                <span
-                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700">Active</span>
-                                            @else
-                                                <span
-                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">Inactive</span>
-                                            @endif
-
-                                            <div class="mt-1">
+                                        <div class="flex flex-col items-center gap-2">
+                                            <form action="{{ route('super-admin.clinics.toggle-status', $clinic) }}" method="POST" id="toggle-form-{{ $clinic->id }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <label class="inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" 
+                                                           class="sr-only peer" 
+                                                           {{ $clinic->is_active ? 'checked' : '' }}
+                                                           onchange="document.getElementById('toggle-form-{{ $clinic->id }}').submit()">
+                                                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                                    <span class="ms-2 text-xs font-bold {{ $clinic->is_active ? 'text-green-700' : 'text-gray-400' }}">
+                                                        {{ $clinic->is_active ? 'Active' : 'Inactive' }}
+                                                    </span>
+                                                </label>
+                                            </form>
+                                            
+                                            <div class="flex items-center gap-1">
                                                 @if($clinic->subscription_status === 'active')
-                                                    <span class="text-[10px] font-bold text-blue-500 uppercase">Paid</span>
+                                                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-bold uppercase tracking-tighter">Paid</span>
                                                 @else
-                                                    <span
-                                                        class="text-[10px] font-bold text-gray-400 uppercase">{{ $clinic->subscription_status ?? 'No Sub' }}</span>
+                                                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-400 font-bold uppercase tracking-tighter">{{ $clinic->subscription_status ?? 'No Sub' }}</span>
                                                 @endif
                                             </div>
                                         </div>
@@ -129,16 +135,6 @@
                                                 <button type="submit"
                                                     class="inline-flex items-center px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 border border-indigo-200 transition">
                                                     Apply
-                                                </button>
-                                            </form>
-
-                                            <form action="{{ route('super-admin.clinics.toggle-status', $clinic) }}"
-                                                method="POST" class="inline">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit"
-                                                    class="text-xs font-bold transition-colors {{ $clinic->is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800' }}">
-                                                    {{ $clinic->is_active ? '❌ Deactivate Clinic' : '✅ Activate Clinic' }}
                                                 </button>
                                             </form>
                                         </div>
