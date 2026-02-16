@@ -5,10 +5,10 @@ $SERVER_IP = "192.168.21.230"
 $SERVER_USER = "root"
 $REMOTE_PATH = "/var/www/html" # Updated per user request
 
-Write-Host "🚀 Starting Deployment Process..." -ForegroundColor Cyan
+Write-Host "Starting Deployment Process..." -ForegroundColor Cyan
 
 # 1. Push to GitHub
-Write-Host "📦 Pushing changes to GitHub..." -ForegroundColor Yellow
+Write-Host "Pushing changes to GitHub..." -ForegroundColor Yellow
 git add .
 $commitMsg = "Automatic deployment: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 git commit -m $commitMsg
@@ -20,7 +20,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 2. Update Live Server
-Write-Host "🌐 Updating Live Server..." -ForegroundColor Yellow
+Write-Host "Update Live Server..." -ForegroundColor Yellow
 
 $remoteCommands = @"
 cd $REMOTE_PATH
@@ -34,10 +34,11 @@ php artisan queue:restart
 chown -R www-data:www-data storage bootstrap/cache
 "@
 
-ssh "${SERVER_USER}@${SERVER_IP}" "$remoteCommands"
+$sshTarget = "$SERVER_USER@$SERVER_IP"
+ssh $sshTarget $remoteCommands
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Deployment Successful!" -ForegroundColor Green
+    Write-Host "Deployment Successful!" -ForegroundColor Green
 } else {
-    Write-Host "❌ Deployment failed during remote execution." -ForegroundColor Red
+    Write-Host "Deployment failed during remote execution." -ForegroundColor Red
 }
