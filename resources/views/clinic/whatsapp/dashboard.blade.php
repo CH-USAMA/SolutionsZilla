@@ -11,6 +11,20 @@
             <!-- Filters -->
             <div class="mb-6 bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                 <form method="GET" action="{{ route('whatsapp.dashboard') }}" class="flex flex-wrap gap-4 items-end">
+                    @if(Auth::user()->isSuperAdmin())
+                        <div class="w-full md:w-64">
+                            <x-input-label for="clinic_id" value="Clinic" />
+                            <select id="clinic_id" name="clinic_id"
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <option value="">All Clinics</option>
+                                @foreach($clinics as $clinic)
+                                    <option value="{{ $clinic->id }}" {{ ($selectedClinicId ?? null) == $clinic->id ? 'selected' : '' }}>
+                                        {{ $clinic->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
                     <div>
                         <x-input-label for="month" value="Month" />
                         <select id="month" name="month"
@@ -106,7 +120,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span
                                                 class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                    {{ $msg->direction === 'outgoing' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
+                                                        {{ $msg->direction === 'outgoing' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
                                                 {{ ucfirst($msg->direction) }}
                                             </span>
                                         </td>
@@ -118,11 +132,11 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                    @if($msg->status === 'sent') bg-blue-100 text-blue-800
-                                                    @elseif($msg->status === 'delivered') bg-green-100 text-green-800
-                                                    @elseif($msg->status === 'read') bg-green-100 text-green-800
-                                                    @elseif($msg->status === 'failed') bg-red-100 text-red-800
-                                                    @else bg-gray-100 text-gray-800 @endif">
+                                                        @if($msg->status === 'sent') bg-blue-100 text-blue-800
+                                                        @elseif($msg->status === 'delivered') bg-green-100 text-green-800
+                                                        @elseif($msg->status === 'read') bg-green-100 text-green-800
+                                                        @elseif($msg->status === 'failed') bg-red-100 text-red-800
+                                                        @else bg-gray-100 text-gray-800 @endif">
                                                 {{ ucfirst($msg->status) }}
                                             </span>
                                         </td>

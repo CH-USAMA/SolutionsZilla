@@ -12,9 +12,28 @@ class WhatsAppSettingsController extends Controller
     /**
      * Show WhatsApp settings form
      */
-    public function index()
+    public function index(Request $request)
     {
-        $clinic = Auth::user()->clinic;
+        $user = Auth::user();
+
+        // Super Admin: allow clinic selection
+        if ($user->isSuperAdmin()) {
+            $clinics = \App\Models\Clinic::orderBy('name')->get();
+            $selectedClinicId = $request->get('clinic_id');
+
+            if ($selectedClinicId) {
+                $clinic = \App\Models\Clinic::find($selectedClinicId);
+                $settings = $clinic?->whatsappSettings ?? new ClinicWhatsappSetting();
+            } else {
+                $clinic = null;
+                $settings = new ClinicWhatsappSetting();
+            }
+
+            return view('whatsapp.settings', compact('settings', 'clinics', 'selectedClinicId'));
+        }
+
+        // Regular clinic user
+        $clinic = $user->clinic;
         $settings = $clinic->whatsappSettings ?? new ClinicWhatsappSetting();
 
         return view('whatsapp.settings', compact('settings'));
@@ -35,10 +54,15 @@ class WhatsAppSettingsController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        $clinic = Auth::user()->clinic;
+        $user = Auth::user();
+        $clinicId = $user->isSuperAdmin() ? $request->clinic_id : $user->clinic_id;
+
+        if (!$clinicId) {
+            return back()->with('error', 'No clinic selected.');
+        }
 
         ClinicWhatsappSetting::updateOrCreate(
-            ['clinic_id' => $clinic->id],
+            ['clinic_id' => $clinicId],
             [
                 'phone_number_id' => $request->phone_number_id,
                 'access_token' => $request->access_token,
@@ -50,15 +74,34 @@ class WhatsAppSettingsController extends Controller
             ]
         );
 
-        return redirect()->route('whatsapp.settings')->with('success', 'WhatsApp settings updated successfully.');
+        return redirect()->route('whatsapp.settings', ['clinic_id' => $clinicId])->with('success', 'WhatsApp settings updated successfully.');
     }
 
     /**
      * Show WhatsApp logs
      */
-    public function logs()
+    public function logs(Request $request)
     {
-        $clinic = Auth::user()->clinic;
+        $user = Auth::user();
+
+        // Super Admin: allow clinic selection or view all
+        if ($user->isSuperAdmin()) {
+            $clinics = \App\Models\Clinic::orderBy('name')->get();
+            $selectedClinicId = $request->get('clinic_id');
+
+            $query = WhatsappLog::with(['appointment.patient', 'clinic']);
+
+            if ($selectedClinicId) {
+                $query->where('clinic_id', $selectedClinicId);
+            }
+
+            $logs = $query->latest()->paginate(20);
+
+            return view('whatsapp.logs', compact('logs', 'clinics', 'selectedClinicId'));
+        }
+
+        // Regular clinic user
+        $clinic = $user->clinic;
 
         $logs = WhatsappLog::where('clinic_id', $clinic->id)
             ->with(['appointment.patient'])
@@ -71,13 +114,20 @@ class WhatsAppSettingsController extends Controller
     /**
      * Send a test WhatsApp message
      */
-    public function test()
+    public function test(Request $request)
     {
-        $clinic = Auth::user()->clinic;
+        $user = Auth::user();
+        $clinicId = $user->isSuperAdmin() ? $request->clinic_id : $user->clinic_id;
+
+        if (!$clinicId) {
+            return back()->with('error', 'No clinic selected.');
+        }
+
+        $clinic = \App\Models\Clinic::find($clinicId);
         $settings = $clinic->whatsappSettings;
 
         if (!$settings) {
-            return back()->with('error', 'Please save your WhatsApp settings first.');
+            return back()->with('error', 'Please save WhatsApp settings for this clinic first.');
         }
 
         // Just use the clinic's own phone for testing if possible, 
@@ -85,7 +135,7 @@ class WhatsAppSettingsController extends Controller
         $testPhone = '923038004684';
 
         $service = app(\App\Services\WhatsAppService::class);
-        $testMessage = 'Test message from ClinicFlow! This verifies your ' . ($settings->message_type === 'text' ? 'Simple Text' : 'Template') . ' settings.';
+        $testMessage = 'Test message from ClinicFlow! This verifies your ' . ($settings->message_type === 'text' ? 'Simple Text' : 'Template') . ' settings and Super Admin integration.';
 
         if ($settings->message_type === 'text') {
             $result = $service->sendSimpleMessage(
@@ -112,9 +162,16 @@ class WhatsAppSettingsController extends Controller
     /**
      * Create a test appointment for testing the scheduler
      */
-    public function createTestAppointment()
+    public function createTestAppointment(Request $request)
     {
-        $clinic = Auth::user()->clinic;
+        $user = Auth::user();
+        $clinicId = $user->isSuperAdmin() ? $request->clinic_id : $user->clinic_id;
+
+        if (!$clinicId) {
+            return back()->with('error', 'No clinic selected.');
+        }
+
+        $clinic = \App\Models\Clinic::find($clinicId);
         $settings = $clinic->whatsappSettings;
         $hours = $settings->reminder_hours_before ?? 24;
 
@@ -123,19 +180,19 @@ class WhatsAppSettingsController extends Controller
         $doctor = $clinic->doctors()->first();
 
         if (!$patient || !$doctor) {
-            return back()->with('error', 'Need at least one patient and one doctor to create a test appointment.');
+            return back()->with('error', 'Need at least one patient and one doctor in ' . $clinic->name . ' to create a test appointment.');
         }
 
         $appointment = \App\Models\Appointment::create([
             'clinic_id' => $clinic->id,
             'patient_id' => $patient->id,
             'doctor_id' => $doctor->id,
-            'appointment_date' => now()->addHours($hours),
-            'appointment_time' => now()->addHours($hours)->format('H:i:s'),
+            'appointment_date' => now()->addHours($hours + 1)->format('Y-m-d'),
+            'appointment_time' => now()->addHours($hours + 1)->format('H:i:s'),
             'status' => 'booked',
-            'notes' => 'Generated for WhatsApp testing',
+            'notes' => 'Generated for WhatsApp testing by Super Admin',
         ]);
 
-        return back()->with('success', "Test appointment #{$appointment->id} created for tomorrow at " . $appointment->appointment_time . ". You can now run 'php artisan reminders:whatsapp' to test.");
+        return back()->with('success', "Test appointment #{$appointment->id} created for clinic '{$clinic->name}' at " . $appointment->appointment_time . ".");
     }
 }

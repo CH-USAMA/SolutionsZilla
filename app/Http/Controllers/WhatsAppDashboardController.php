@@ -15,7 +15,56 @@ class WhatsAppDashboardController extends Controller
      */
     public function index(Request $request)
     {
-        $clinicId = $request->user()->clinic_id; // Assuming user has clinic_id
+        $user = $request->user();
+
+        // Super Admin: allow clinic selection or view all
+        if ($user->isSuperAdmin()) {
+            $clinics = \App\Models\Clinic::orderBy('name')->get();
+            $selectedClinicId = $request->input('clinic_id');
+
+            $month = $request->input('month', now()->month);
+            $year = $request->input('year', now()->year);
+
+            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $endDate = $startDate->copy()->endOfMonth();
+
+            // Build queries with optional clinic filter
+            $conversationQuery = WhatsAppConversation::whereBetween('started_at', [$startDate, $endDate]);
+            $messageQuery = WhatsAppMessage::whereBetween('created_at', [$startDate, $endDate]);
+
+            if ($selectedClinicId) {
+                $conversationQuery->where('clinic_id', $selectedClinicId);
+                $messageQuery->where('clinic_id', $selectedClinicId);
+            }
+
+            // Stats
+            $conversationsCount = $conversationQuery->count();
+            $messagesSent = (clone $messageQuery)->where('direction', 'outgoing')->count();
+            $messagesDelivered = (clone $messageQuery)->where('direction', 'outgoing')->where('status', 'delivered')->count();
+            $estimatedCost = $conversationQuery->sum('cost');
+
+            // Recent Messages
+            $recentMessagesQuery = WhatsAppMessage::with(['conversation', 'clinic'])->orderBy('created_at', 'desc');
+            if ($selectedClinicId) {
+                $recentMessagesQuery->where('clinic_id', $selectedClinicId);
+            }
+            $recentMessages = $recentMessagesQuery->paginate(10);
+
+            return view('clinic.whatsapp.dashboard', compact(
+                'month',
+                'year',
+                'conversationsCount',
+                'messagesSent',
+                'messagesDelivered',
+                'estimatedCost',
+                'recentMessages',
+                'clinics',
+                'selectedClinicId'
+            ));
+        }
+
+        // Regular clinic user
+        $clinicId = $user->clinic_id;
 
         $month = $request->input('month', now()->month);
         $year = $request->input('year', now()->year);

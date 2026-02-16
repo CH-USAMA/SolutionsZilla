@@ -74,7 +74,8 @@
                             <div class="text-right hidden sm:block">
                                 <p class="text-sm font-semibold text-gray-800">{{ Auth::user()->name }}</p>
                                 <p class="text-xs text-gray-500 uppercase tracking-wider">
-                                    {{ str_replace('_', ' ', Auth::user()->role) }}</p>
+                                    {{ str_replace('_', ' ', Auth::user()->role) }}
+                                </p>
                             </div>
                             <div
                                 class="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold ring-2 ring-white shadow-sm transition-transform hover:scale-105">
@@ -94,7 +95,8 @@
                             <div class="px-4 py-2 border-b border-gray-100 mb-1 lg:hidden">
                                 <p class="text-sm font-semibold text-gray-800">{{ Auth::user()->name }}</p>
                                 <p class="text-xs text-gray-500 uppercase">
-                                    {{ str_replace('_', ' ', Auth::user()->role) }}</p>
+                                    {{ str_replace('_', ' ', Auth::user()->role) }}
+                                </p>
                             </div>
 
                             <a href="{{ route('profile.edit') }}"
@@ -153,6 +155,7 @@
             </main>
         </div>
     </div>
+    @stack('scripts')
 </body>
 
 </html>

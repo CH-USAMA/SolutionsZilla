@@ -150,5 +150,8 @@ class DatabaseSeeder extends Seeder
             'appointment_time' => '10:00:00',
             'status' => 'booked',
         ]);
+
+        // 8. Seed comprehensive demo data for all tables
+        $this->call(SystemDemoSeeder::class);
     }
 }

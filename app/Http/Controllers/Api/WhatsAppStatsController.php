@@ -17,14 +17,37 @@ class WhatsAppStatsController extends Controller
      */
     public function stats(Request $request)
     {
-        $clinicId = $request->user()->clinic_id;
+        $user = $request->user();
+        $clinicId = $user->isSuperAdmin() ? $request->input('clinic_id') : $user->clinic_id;
 
-        if (!$clinicId) {
+        if (!$clinicId && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'Clinic not found'], 404);
         }
 
         $month = $request->input('month', now()->month);
         $year = $request->input('year', now()->year);
+
+        // Collective stats for Super Admin if no clinic_id
+        if ($user->isSuperAdmin() && !$clinicId) {
+            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $endDate = $startDate->copy()->endOfMonth();
+
+            $conversationsCount = WhatsAppConversation::whereBetween('started_at', [$startDate, $endDate])->count();
+            $messagesSent = WhatsAppMessage::where('direction', 'outgoing')->whereBetween('created_at', [$startDate, $endDate])->count();
+            $messagesDelivered = WhatsAppMessage::where('direction', 'outgoing')->where('status', 'delivered')->whereBetween('created_at', [$startDate, $endDate])->count();
+
+            return response()->json([
+                'data' => [
+                    'month' => (int) $month,
+                    'year' => (int) $year,
+                    'conversations_count' => $conversationsCount,
+                    'messages_sent' => $messagesSent,
+                    'messages_delivered' => $messagesDelivered,
+                    'estimated_cost' => (float) WhatsAppConversation::whereBetween('started_at', [$startDate, $endDate])->sum('cost'),
+                    'is_collective' => true
+                ]
+            ]);
+        }
 
         // Get stored monthly usage record
         $usage = WhatsAppUsage::where('clinic_id', $clinicId)
@@ -32,10 +55,10 @@ class WhatsAppStatsController extends Controller
             ->where('year', $year)
             ->first();
 
-        // If current month, calculate real-time
-        if (!$usage && (int) $month === now()->month && (int) $year === now()->year) {
-            $startDate = now()->startOfMonth();
-            $endDate = now();
+        // If current month or no usage record, calculate real-time
+        if (!$usage || ((int) $month === now()->month && (int) $year === now()->year)) {
+            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $endDate = ($month == now()->month && $year == now()->year) ? now() : $startDate->copy()->endOfMonth();
 
             $conversationsCount = WhatsAppConversation::where('clinic_id', $clinicId)
                 ->whereBetween('started_at', [$startDate, $endDate])
@@ -58,17 +81,15 @@ class WhatsAppStatsController extends Controller
                 'conversations_count' => $conversationsCount,
                 'messages_sent' => $messagesSent,
                 'messages_delivered' => $messagesDelivered,
-                'estimated_cost' => 0.00, // Placeholder
+                'estimated_cost' => (float) WhatsAppConversation::where('clinic_id', $clinicId)->whereBetween('started_at', [$startDate, $endDate])->sum('cost'),
                 'currency' => 'USD',
                 'is_estimated' => true
             ];
         } else {
-            $stats = $usage ? $usage->toArray() : null;
+            $stats = $usage->toArray();
         }
 
-        return response()->json([
-            'data' => $stats
-        ]);
+        return response()->json(['data' => $stats]);
     }
 
     /**
@@ -76,14 +97,18 @@ class WhatsAppStatsController extends Controller
      */
     public function messages(Request $request)
     {
-        $clinicId = $request->user()->clinic_id;
+        $user = $request->user();
+        $clinicId = $user->isSuperAdmin() ? $request->input('clinic_id') : $user->clinic_id;
 
-        if (!$clinicId) {
+        if (!$clinicId && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'Clinic not found'], 404);
         }
 
-        $query = WhatsAppMessage::where('clinic_id', $clinicId)
-            ->orderBy('created_at', 'desc');
+        $query = WhatsAppMessage::with('clinic')->orderBy('created_at', 'desc');
+
+        if ($clinicId) {
+            $query->where('clinic_id', $clinicId);
+        }
 
         if ($request->has('status')) {
             $query->where('status', $request->input('status'));
@@ -91,10 +116,6 @@ class WhatsAppStatsController extends Controller
 
         if ($request->has('direction')) {
             $query->where('direction', $request->input('direction'));
-        }
-
-        if ($request->has('conversation_id')) {
-            $query->where('conversation_id', $request->input('conversation_id'));
         }
 
         $messages = $query->paginate($request->input('per_page', 20));

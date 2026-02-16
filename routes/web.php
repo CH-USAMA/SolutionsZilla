@@ -119,6 +119,10 @@ Route::middleware(['auth', 'role:super_admin'])->group(function () {
     // Super Admin User Management
     Route::get('/super-admin/users', [\App\Http\Controllers\UserController::class, 'index'])->name('super-admin.users.index');
     Route::patch('/super-admin/users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword'])->name('super-admin.users.reset-password');
+
+    // API Explorer
+    Route::get('/super-admin/api-explorer', [\App\Http\Controllers\SuperAdmin\ApiExplorerController::class, 'index'])->name('super-admin.api-explorer');
+    Route::post('/super-admin/api-explorer/execute', [\App\Http\Controllers\SuperAdmin\ApiExplorerController::class, 'execute'])->name('super-admin.api-explorer.execute');
 });
 
 require __DIR__ . '/auth.php';

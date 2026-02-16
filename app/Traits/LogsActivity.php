@@ -15,11 +15,10 @@ trait LogsActivity
         });
 
         static::updated(function ($model) {
-            $changes = [
-                'before' => array_intersect_key($model->getOriginal(), $model->getChanges()),
-                'after' => $model->getChanges(),
-            ];
-            $model->logActivity('updated', null, $changes);
+            $before = array_intersect_key($model->getOriginal(), $model->getChanges());
+            $after = $model->getChanges();
+
+            $model->logActivity('updated', $before, $after);
         });
 
         static::deleted(function ($model) {

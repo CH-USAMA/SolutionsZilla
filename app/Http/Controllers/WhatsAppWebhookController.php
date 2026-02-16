@@ -101,21 +101,27 @@ class WhatsAppWebhookController extends Controller
         // 1. Manage Conversation (24h Window)
         $conversation = $this->getOrCreateConversation($clinicId, $from, $timestamp);
 
-        // 2. Persist Message
-        WhatsAppMessage::create([
-            'clinic_id' => $clinicId,
-            'message_id' => $messageId,
-            'wamid' => $messageId,
-            'from' => $from,
-            'to' => $metadata['display_phone_number'] ?? '',
-            'type' => $type,
-            'direction' => 'incoming',
-            'body' => $this->extractBody($payload),
-            'status' => 'received',
-            'metadata' => $payload,
-            'conversation_id' => $conversation->conversation_id,
-            'created_at' => $timestamp,
-        ]);
+        // 2. Persist Message (Idempotency Check)
+        $existingMessage = WhatsAppMessage::where('clinic_id', $clinicId)
+            ->where('message_id', $messageId)
+            ->first();
+
+        if (!$existingMessage) {
+            WhatsAppMessage::create([
+                'clinic_id' => $clinicId,
+                'message_id' => $messageId,
+                'wamid' => $messageId,
+                'from' => $from,
+                'to' => $metadata['display_phone_number'] ?? '',
+                'type' => $type,
+                'direction' => 'incoming',
+                'body' => $this->extractBody($payload),
+                'status' => 'received',
+                'metadata' => $payload,
+                'conversation_id' => $conversation->conversation_id,
+                'created_at' => $timestamp,
+            ]);
+        }
 
         // 3. Logic: Appointment Confirmation
         if ($type === 'text') {
