@@ -17,6 +17,13 @@ class WhatsAppWebhookController extends Controller
      */
     public function handle(Request $request)
     {
+        Log::info('WhatsApp Webhook Entry', [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'headers' => $request->headers->all(),
+            'payload' => $request->all()
+        ]);
+
         // 1. Signature Verification (Production Security)
         if (!$this->validateSignature($request)) {
             Log::warning('WhatsApp Webhook: Invalid signature', [
