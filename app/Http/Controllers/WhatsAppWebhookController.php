@@ -63,7 +63,7 @@ class WhatsAppWebhookController extends Controller
 
             // Find Tenant
             $setting = ClinicWhatsappSetting::withoutGlobalScopes()
-                ->where('phone_number_id', $phoneNumberId)
+                ->where('phone_number_id', (string) $phoneNumberId)
                 ->first();
 
             if (!$setting) {
