@@ -131,31 +131,52 @@
             <!-- Page Content -->
             <main class="flex-1 overflow-y-auto bg-gray-100">
                 <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                    <!-- Flash Messages -->
-                    @if(session('success'))
-                        <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative"
-                            role="alert">
-                            <span class="block sm:inline">{{ session('success') }}</span>
-                        </div>
-                    @endif
-
-                    @if($errors->any())
-                        <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-                            role="alert">
-                            <ul>
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
                     {{ $slot }}
                 </div>
             </main>
         </div>
     </div>
+
     @stack('scripts')
+
+    <!-- SweetAlert2 Integration -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            @if(session('success'))
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: "{{ session('success') }}",
+                    timer: 3000,
+                    timerProgressBar: true,
+                    confirmButtonColor: '#2563eb'
+                });
+            @endif
+
+            @if(session('error'))
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: "{{ session('error') }}",
+                    confirmButtonColor: '#2563eb'
+                });
+            @endif
+
+            @if($errors->any())
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    html: `<ul class="text-left text-sm">
+                        @foreach($errors->all() as $error)
+                            <li>• {{ $error }}</li>
+                        @endforeach
+                    </ul>`,
+                    confirmButtonColor: '#2563eb'
+                });
+            @endif
+        });
+    </script>
 </body>
 
 </html>

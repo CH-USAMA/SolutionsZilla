@@ -69,7 +69,7 @@ class WhatsAppSettingsController extends Controller
             [
                 'phone_number_id' => $request->phone_number_id,
                 'access_token' => $request->access_token,
-                'default_template' => $request->default_template ?? ($settings->default_template ?? 'appointment_reminder'),
+                'default_template' => $request->default_template ?? ($settings?->default_template ?? 'appointment_reminder'),
                 'message_type' => $request->message_type,
                 'custom_message' => $request->custom_message,
                 'reminder_hours_before' => $request->reminder_hours_before,

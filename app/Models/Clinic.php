@@ -86,6 +86,11 @@ class Clinic extends Model
     /**
      * Get the WhatsApp settings for this clinic
      */
+    public function whatsappSettings()
+    {
+        return $this->hasOne(ClinicWhatsappSetting::class);
+    }
+
     /**
      * Get all SMS logs for this clinic
      */

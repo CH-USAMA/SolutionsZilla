@@ -27,19 +27,14 @@
             @endif
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                @if(session('success'))
-                    <div class="mb-4 font-medium text-sm text-green-600">
-                        {{ session('success') }}
-                    </div>
-                @endif
-
                 @if(Auth::user()->isSuperAdmin() && !$selectedClinicId)
                     <div class="text-center py-8">
                         <p class="text-gray-500 italic">Please select a clinic above to view or manage WhatsApp settings.
                         </p>
                     </div>
                 @else
-                    <form method="POST" action="{{ route('whatsapp.settings.update') }}" class="space-y-6">
+                    <form method="POST" action="{{ route('whatsapp.settings.update') }}" class="space-y-6"
+                        autocomplete="off">
                         @csrf
                         @if($selectedClinicId)
                             <input type="hidden" name="clinic_id" value="{{ $selectedClinicId }}">
