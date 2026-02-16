@@ -35,8 +35,9 @@ class WhatsAppSettingsController extends Controller
         // Regular clinic user
         $clinic = $user->clinic;
         $settings = $clinic->whatsappSettings ?? new ClinicWhatsappSetting();
+        $selectedClinicId = null;
 
-        return view('whatsapp.settings', compact('settings'));
+        return view('whatsapp.settings', compact('settings', 'selectedClinicId'));
     }
 
     /**
@@ -102,13 +103,14 @@ class WhatsAppSettingsController extends Controller
 
         // Regular clinic user
         $clinic = $user->clinic;
+        $selectedClinicId = null;
 
         $logs = WhatsappLog::where('clinic_id', $clinic->id)
             ->with(['appointment.patient'])
             ->latest()
             ->paginate(20);
 
-        return view('whatsapp.logs', compact('logs'));
+        return view('whatsapp.logs', compact('logs', 'selectedClinicId'));
     }
 
     /**
