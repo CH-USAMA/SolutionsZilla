@@ -40,7 +40,15 @@ chown -R www-data:www-data storage bootstrap/cache
 $normalizedCommands = $remoteCommands -replace "`r`n", "`n"
 
 $sshTarget = "$SERVER_USER@$SERVER_IP"
-ssh $sshTarget $normalizedCommands
+Write-Host "Connecting to $sshTarget using password..." -ForegroundColor Gray
+
+# Use plink (PuTTY) to automate password input if available
+if (Get-Command plink -ErrorAction SilentlyContinue) {
+    plink -batch -pw $SERVER_PASS $sshTarget $normalizedCommands
+} else {
+    Write-Host "plink not found, falling back to standard ssh (manual password required)..." -ForegroundColor Magenta
+    ssh $sshTarget $normalizedCommands
+}
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Deployment Successful!" -ForegroundColor Green
