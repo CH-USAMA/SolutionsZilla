@@ -16,7 +16,8 @@
                         <div class="mb-6">
                             <h3 class="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Patient Details</h3>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                x-data="{ showAdvanced: {{ old('show_advanced') ? 'true' : 'false' }} }">
                                 <div>
                                     <x-input-label for="patient_name" value="Patient Name" />
                                     <x-text-input id="patient_name" class="block mt-1 w-full" type="text"
@@ -37,6 +38,37 @@
                                     <x-text-input id="patient_email" class="block mt-1 w-full" type="email"
                                         name="patient_email" :value="old('patient_email')" />
                                     <x-input-error :messages="$errors->get('patient_email')" class="mt-2" />
+                                </div>
+
+                                <div class="col-span-1 md:col-span-2 mt-2">
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="show_advanced" value="1" x-model="showAdvanced"
+                                            class="sr-only peer">
+                                        <div
+                                            class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                        </div>
+                                        <span class="ms-3 text-sm font-medium text-gray-700">Add extra information (DOB,
+                                            Address)</span>
+                                    </label>
+                                </div>
+
+                                <div class="col-span-1 md:col-span-2 space-y-4 pt-2" x-show="showAdvanced" x-transition>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <x-input-label for="patient_dob" value="Date of Birth" />
+                                            <x-text-input id="patient_dob" class="block mt-1 w-full" type="date"
+                                                name="patient_dob" :value="old('patient_dob')"
+                                                max="{{ date('Y-m-d') }}" />
+                                            <x-input-error :messages="$errors->get('patient_dob')" class="mt-2" />
+                                        </div>
+                                        <div>
+                                            <x-input-label for="patient_address" value="Address" />
+                                            <x-text-input id="patient_address" class="block mt-1 w-full" type="text"
+                                                name="patient_address" :value="old('patient_address')"
+                                                placeholder="Full Address" />
+                                            <x-input-error :messages="$errors->get('patient_address')" class="mt-2" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

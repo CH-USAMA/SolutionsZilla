@@ -32,7 +32,8 @@ class AppointmentController extends Controller
         $isSuperAdmin = $user->isSuperAdmin();
 
         if ($request->ajax()) {
-            $query = Appointment::query()->with(['patient', 'doctor', 'clinic']);
+            $query = Appointment::query()->with(['patient', 'doctor', 'clinic'])
+                ->latest();
 
             if (!$isSuperAdmin) {
                 $query->forClinic($user->clinic_id);
@@ -157,6 +158,8 @@ class AppointmentController extends Controller
                 'appointment_date' => $request->appointment_date,
                 'appointment_time' => $request->appointment_time,
                 'reason' => $request->notes, // notes used as reason
+                'patient_dob' => $request->patient_dob,
+                'patient_address' => $request->patient_address,
             ];
 
             $this->appointmentService->bookAppointment($data, $clinic);

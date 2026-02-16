@@ -35,8 +35,24 @@ class AppointmentService
                     'name' => $data['name'],
                     'email' => $data['email'] ?? null,
                     'gender' => $data['gender'] ?? null,
+                    'date_of_birth' => $data['patient_dob'] ?? null,
+                    'address' => $data['patient_address'] ?? null,
                 ]
             );
+
+            // Update existing patient info if provided and was missing
+            if ($patient->wasRecentlyCreated === false) {
+                $updates = [];
+                if (!empty($data['patient_dob']) && empty($patient->date_of_birth)) {
+                    $updates['date_of_birth'] = $data['patient_dob'];
+                }
+                if (!empty($data['patient_address']) && empty($patient->address)) {
+                    $updates['address'] = $data['patient_address'];
+                }
+                if (!empty($updates)) {
+                    $patient->update($updates);
+                }
+            }
 
             // 3. Double-booking Check
             $exists = Appointment::where('doctor_id', $data['doctor_id'])

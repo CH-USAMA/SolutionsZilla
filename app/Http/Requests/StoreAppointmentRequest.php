@@ -29,6 +29,8 @@ class StoreAppointmentRequest extends FormRequest
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['required', 'date_format:H:i'],
             'notes' => ['nullable', 'string'],
+            'patient_dob' => ['nullable', 'date', 'before:today'],
+            'patient_address' => ['nullable', 'string', 'max:500'],
         ];
     }
 
