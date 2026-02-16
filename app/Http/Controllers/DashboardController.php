@@ -45,7 +45,7 @@ class DashboardController extends Controller
             ->with(['patient', 'doctor'])
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
-            ->limit(10)
+            ->limit(50)
             ->get();
 
         return view('dashboard', compact(
