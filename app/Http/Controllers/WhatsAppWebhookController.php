@@ -24,8 +24,8 @@ class WhatsAppWebhookController extends Controller
             'payload' => $request->all()
         ]);
 
-        // 1. Signature Verification (Production Security)
-        if (!$this->validateSignature($request)) {
+        // 1. Signature Verification (Production Security - Skip for third-party bridges for now unless secrets provided)
+        if ($request->hasHeader('X-Hub-Signature-256') && !$this->validateSignature($request)) {
             Log::warning('WhatsApp Webhook: Invalid signature', [
                 'ip' => $request->ip(),
                 'header' => $request->header('X-Hub-Signature-256'),
@@ -44,12 +44,16 @@ class WhatsAppWebhookController extends Controller
         // 3. Handle Events (POST)
         try {
             $payload = $request->all();
-            Log::info('WhatsApp Webhook Payload Received', ['payload' => $payload]);
 
-            // Meta standard structure: entry[0].changes[0]
+            // Determine structure and normalize
+            if ($request->has('typeWebhook') && $request->has('idMessage')) {
+                return $this->handleBridgePayload($request);
+            }
+
+            // Meta standard structure
             $changes = $request->input('entry.0.changes.0');
 
-            // Fallback for simplified test payloads (like the one provided by user)
+            // Fallback for simplified test payloads
             if (!$changes && $request->has('field') && $request->has('value')) {
                 $changes = $payload;
             }
@@ -87,7 +91,7 @@ class WhatsAppWebhookController extends Controller
                 }
             }
 
-            // Handle Status Updates (Sent, Delivered, Read)
+            // Handle Status Updates
             if (!empty($value['statuses'])) {
                 foreach ($value['statuses'] as $status) {
                     $this->processStatus($clinicId, $status);
@@ -103,6 +107,51 @@ class WhatsAppWebhookController extends Controller
             ]);
             return response()->json(['error' => 'Internal error'], 500);
         }
+    }
+
+    /**
+     * Handle payloads from third-party bridges (Green-API, etc.)
+     */
+    private function handleBridgePayload(Request $request)
+    {
+        $type = $request->input('typeWebhook');
+        $idInstance = $request->input('instanceData.idInstance');
+
+        // Find setting by Instance ID or Phone ID
+        $setting = ClinicWhatsappSetting::withoutGlobalScopes()
+            ->where('phone_number_id', (string) $idInstance)
+            ->first();
+
+        if (!$setting) {
+            Log::warning("WhatsApp Webhook (Bridge): Unknown instance ID: $idInstance");
+            return response()->json(['status' => 'error', 'message' => 'unknown_instance']);
+        }
+
+        $clinicId = $setting->clinic_id;
+
+        if ($type === 'incomingMessageReceived') {
+            $sender = str_replace('@c.us', '', $request->input('senderData.sender'));
+            $body = '';
+            $msgType = $request->input('messageData.typeMessage');
+
+            if ($msgType === 'textMessage') {
+                $body = $request->input('messageData.textMessageData.textMessage');
+            }
+
+            $payload = [
+                'id' => $request->input('idMessage'),
+                'from' => $sender,
+                'type' => $msgType === 'textMessage' ? 'text' : $msgType,
+                'timestamp' => $request->input('timestamp'),
+                'text' => ['body' => $body]
+            ];
+
+            $this->processMessage($clinicId, $payload, [
+                'display_phone_number' => $request->input('instanceData.wid', '')
+            ]);
+        }
+
+        return response()->json(['status' => 'ok']);
     }
 
     /**
