@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-12" x-data="{ showCancelModal: false }">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
@@ -91,6 +91,16 @@
                         </div>
                     @endif
 
+                    @if($appointment->cancellation_reason)
+                        <div class="mb-6">
+                            <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2 text-red-600">
+                                Cancellation Reason</h4>
+                            <div class="bg-red-50 p-4 rounded-md text-red-700 text-sm border border-red-100">
+                                {{ $appointment->cancellation_reason }}
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="border-t pt-6 flex justify-between items-center">
                         <form action="{{ route('appointments.destroy', $appointment) }}" method="POST"
                             onsubmit="return confirm('Are you sure?');">
@@ -101,12 +111,9 @@
 
                         <div class="flex space-x-3">
                             @if($appointment->status === 'booked')
-                                <form action="{{ route('appointments.update-status', $appointment) }}" method="POST">
-                                    @csrf @method('PATCH')
-                                    <input type="hidden" name="status" value="cancelled">
-                                    <button type="submit"
-                                        class="px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200">Cancel</button>
-                                </form>
+                                <button type="button" @click="showCancelModal = true"
+                                    class="px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200">Cancel</button>
+
                                 <form action="{{ route('appointments.update-status', $appointment) }}" method="POST">
                                     @csrf @method('PATCH')
                                     <input type="hidden" name="status" value="confirmed">
@@ -134,5 +141,73 @@
                 </div>
             </div>
         </div>
+
+        <!-- Cancellation Modal -->
+        <div x-show="showCancelModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+            role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="showCancelModal" x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="showCancelModal = false">
+                </div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="showCancelModal" x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+
+                    <form action="{{ route('appointments.update-status', $appointment) }}" method="POST">
+                        @csrf @method('PATCH')
+                        <input type="hidden" name="status" value="cancelled">
+
+                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <div class="sm:flex sm:items-start">
+                                <div
+                                    class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                        Cancel Appointment
+                                    </h3>
+                                    <div class="mt-4">
+                                        <label for="cancellation_reason"
+                                            class="block text-sm font-medium text-gray-700 mb-2">
+                                            Please provide a reason for cancellation
+                                        </label>
+                                        <textarea id="cancellation_reason" name="cancellation_reason" rows="3"
+                                            class="shadow-sm focus:ring-red-500 focus:border-red-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
+                                            placeholder="e.g. Patient called to reschedule, Doctor unavailable..."
+                                            required></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                            <button type="submit"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                Confirm Cancellation
+                            </button>
+                            <button type="button" @click="showCancelModal = false"
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                                Back
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+
 </x-app-layout>

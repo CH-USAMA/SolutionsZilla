@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
                 ->withHeader('User-Agent', 'ClinicFlow-App/1.0');
         });
 
-        if (config('app.env') !== 'local' || str_contains(config('app.url'), 'https')) {
+        if (!app()->isLocal()) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
     }
