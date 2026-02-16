@@ -55,3 +55,6 @@ if ($LASTEXITCODE -eq 0) {
 } else {
     Write-Host "Deployment failed during remote execution." -ForegroundColor Red
 }
+
+
+# powershell -ExecutionPolicy Bypass -File .\deploy.ps1
