@@ -26,6 +26,7 @@ Write-Host "Update Live Server..." -ForegroundColor Yellow
 $remoteCommands = @"
 cd $REMOTE_PATH
 git pull origin main
+export COMPOSER_ALLOW_SUPERUSER=1
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan config:cache
@@ -35,8 +36,11 @@ php artisan queue:restart
 chown -R www-data:www-data storage bootstrap/cache
 "@
 
+# Normalize line endings from CRLF to LF for Linux Bash compatibility
+$normalizedCommands = $remoteCommands -replace "`r`n", "`n"
+
 $sshTarget = "$SERVER_USER@$SERVER_IP"
-ssh $sshTarget $remoteCommands
+ssh $sshTarget $normalizedCommands
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Deployment Successful!" -ForegroundColor Green
