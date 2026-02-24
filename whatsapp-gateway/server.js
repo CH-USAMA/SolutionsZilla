@@ -13,7 +13,16 @@ const LOG_FILE = path.join(__dirname, 'debug.log');
 const logToFile = (msg, extra = '') => {
     try {
         const timestamp = new Date().toISOString();
-        const content = extra ? `${msg} ${JSON.stringify(extra)}` : msg;
+        let content = msg;
+
+        if (extra) {
+            if (extra instanceof Error) {
+                content += ` Error: ${extra.message} \nStack: ${extra.stack}`;
+            } else {
+                content += ` ${JSON.stringify(extra)}`;
+            }
+        }
+
         fs.appendFileSync(LOG_FILE, `[${timestamp}] ${content}\n`);
         console.log(`[LOG] ${content}`);
     } catch (err) {
@@ -135,7 +144,9 @@ const initSession = (sessionId) => {
         sessions.delete(sessionId);
     });
 
-    client.initialize().catch(err => {
+    client.initialize().then(() => {
+        logToFile(`Initialize call success for ${sessionId}`);
+    }).catch(err => {
         logToFile(`FAILED TO INITIALIZE ${sessionId}:`, err);
         sessionData.status = 'failed';
     });
