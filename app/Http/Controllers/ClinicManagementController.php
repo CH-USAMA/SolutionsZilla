@@ -19,7 +19,7 @@ class ClinicManagementController extends Controller
             abort(403);
         }
 
-        $clinics = Clinic::with('plan')
+        $clinics = Clinic::with(['plan', 'whatsappSettings'])
             ->withCount(['users', 'doctors', 'patients', 'appointments'])
             ->latest()
             ->get();
@@ -158,5 +158,36 @@ class ClinicManagementController extends Controller
         );
 
         return redirect()->back()->with('success', "WhatsApp configuration for \"{$clinic->name}\" updated successfully.");
+    }
+
+    /**
+     * Show the form for editing the specified clinic.
+     */
+    public function edit(Clinic $clinic)
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
+        return view('super-admin.clinics.edit', compact('clinic'));
+    }
+
+    /**
+     * Update the specified clinic in storage.
+     */
+    public function update(Request $request, Clinic $clinic)
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string',
+            'address' => 'nullable|string',
+        ]);
+
+        $clinic->update($request->only(['name', 'phone', 'address']));
+
+        return redirect()->route('super-admin.clinics.index')->with('success', "Clinic \"{$clinic->name}\" updated successfully.");
     }
 }
