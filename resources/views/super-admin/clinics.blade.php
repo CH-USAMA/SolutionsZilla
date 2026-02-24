@@ -56,6 +56,9 @@
                                     Status</th>
                                 <th
                                     class="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    WhatsApp</th>
+                                <th
+                                    class="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
                                     Assign Plan</th>
                             </tr>
                         </thead>
@@ -118,6 +121,41 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        <form action="{{ route('super-admin.clinics.update-providers', $clinic) }}" method="POST" id="providers-form-{{ $clinic->id }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <div class="flex flex-col gap-2 items-start justify-center">
+                                                <div class="flex gap-2">
+                                                    <label class="inline-flex items-center text-[10px] uppercase font-bold text-gray-600">
+                                                        <input type="radio" name="provider" value="meta" 
+                                                               {{ in_array('meta', $clinic->allowed_whatsapp_providers ?? ['meta']) ? 'checked' : '' }}
+                                                               class="w-3 h-3 text-indigo-600 border-gray-300 focus:ring-indigo-500 mr-1">
+                                                        Meta
+                                                    </label>
+                                                    <label class="inline-flex items-center text-[10px] uppercase font-bold text-gray-600">
+                                                        <input type="radio" name="provider" value="js_api" 
+                                                               {{ in_array('js_api', $clinic->allowed_whatsapp_providers ?? []) ? 'checked' : '' }}
+                                                               class="w-3 h-3 text-indigo-600 border-gray-300 focus:ring-indigo-500 mr-1">
+                                                        JS API
+                                                    </label>
+                                                </div>
+                                                
+                                                <div class="space-y-1 w-full" x-data="{ showConfig: {{ in_array('js_api', $clinic->allowed_whatsapp_providers ?? []) ? 'true' : 'false' }} }">
+                                                    <input type="text" name="js_api_url" 
+                                                           placeholder="{{ config('services.whatsapp.js_api_url') ? 'Global: ' . config('services.whatsapp.js_api_url') : 'API URL' }}" 
+                                                           value="{{ $clinic->whatsappSettings->js_api_url ?? '' }}"
+                                                           class="text-[10px] w-full px-1 py-0.5 border-gray-200 rounded focus:ring-0">
+                                                    <input type="text" name="js_session_id" placeholder="Session ID" 
+                                                           value="{{ $clinic->whatsappSettings->js_session_id ?? '' }}"
+                                                           class="text-[10px] w-full px-1 py-0.5 border-gray-200 rounded focus:ring-0">
+                                                    <button type="submit" class="w-full text-[9px] bg-indigo-50 text-indigo-600 border border-indigo-200 rounded py-0.5 hover:bg-indigo-100 transition">
+                                                        Save Config
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
                                         <div class="flex flex-col gap-2 items-center">
                                             <form action="{{ route('super-admin.clinics.update-plan', $clinic) }}"
                                                 method="POST" class="inline-flex items-center gap-2">
@@ -147,4 +185,25 @@
             </div>
         </div>
     </div>
+    <script>
+        @if(session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: {!! json_encode(session('success')) !!},
+                timer: 3000,
+                timerProgressBar: true,
+                confirmButtonColor: '#2563eb'
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: {!! json_encode(session('error')) !!},
+                confirmButtonColor: '#2563eb'
+            });
+        @endif
+    </script>
 </x-app-layout>

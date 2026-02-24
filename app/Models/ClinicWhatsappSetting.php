@@ -21,6 +21,11 @@ class ClinicWhatsappSetting extends Model
         'custom_message',
         'reminder_hours_before',
         'is_active',
+        'provider',
+        'js_api_url',
+        'js_api_key',
+        'js_session_id',
+        'js_connection_status',
     ];
 
     protected $casts = [

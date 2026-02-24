@@ -4,21 +4,33 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\WhatsAppMessage;
+use App\Models\ClinicWhatsappSetting;
+use App\Services\WhatsApp\MetaProvider;
+use App\Services\WhatsApp\JsApiProvider;
+use App\Interfaces\WhatsAppProviderInterface;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppService
 {
     /**
+     * Get the appropriate provider for a clinic
+     */
+    public function getProvider(ClinicWhatsappSetting $settings): WhatsAppProviderInterface
+    {
+        if ($settings->provider === 'js_api') {
+            return app(JsApiProvider::class);
+        }
+
+        return app(MetaProvider::class);
+    }
+
+    /**
      * Send WhatsApp reminder for appointment
-     * 
-     * @param Appointment $appointment
-     * @return bool
      */
     public function sendAppointmentReminder(Appointment $appointment): bool
     {
         try {
-            // Load clinic WhatsApp settings
             $settings = $appointment->clinic->whatsappSettings;
 
             if (!$settings || !$settings->is_active) {
@@ -31,7 +43,7 @@ class WhatsAppService
             $phone = $this->formatPhoneNumber($appointment->patient->phone);
             $message = $this->buildReminderMessage($appointment);
 
-            // Dispatch background job for actual sending
+            // Dispatch background job
             \App\Jobs\SendWhatsAppMessageJob::dispatch(
                 $appointment->clinic_id,
                 $phone,
@@ -41,169 +53,35 @@ class WhatsAppService
             );
 
             return true;
-
         } catch (\Exception $e) {
             Log::error('WhatsApp dispatch failed', [
                 'appointment_id' => $appointment->id,
                 'error' => $e->getMessage(),
             ]);
-
             return false;
         }
     }
 
     /**
-     * Send simple text message via Meta WhatsApp Cloud API
+     * Unified send message method called by background jobs
      */
     public function sendSimpleMessage($settings, string $phone, array $params = [], ?int $appointmentId = null): bool
     {
-        $clinicId = $settings->clinic_id;
-
-        // Prepare payload
-        $payload = [
-            'messaging_product' => 'whatsapp',
-            'recipient_type' => 'individual',
-            'to' => $phone,
-            'type' => 'text',
-            'text' => [
-                'preview_url' => false,
-                'body' => $params['message'],
-            ],
-        ];
-
-        // Create log entry (pending)
-        $log = WhatsAppMessage::create([
-            'clinic_id' => $clinicId,
-            'message_id' => 'pending_' . uniqid(),
-            'direction' => 'outgoing',
-            'to' => $phone,
-            'from' => $settings->phone_number_id, // We use phone_number_id as sender identifier
-            'type' => 'text',
-            'body' => $params['message'],
-            'metadata' => [
-                'payload' => $payload,
-                'appointment_id' => $appointmentId
-            ],
-            'status' => 'pending',
-        ]);
-
-        try {
-            // Call Meta WhatsApp Cloud API
-            $response = Http::withToken($settings->access_token)
-                ->withHeaders(['ngrok-skip-browser-warning' => 'true'])
-                ->withUserAgent('ClinicFlow-WhatsApp/1.0')
-                ->post("https://graph.facebook.com/v20.0/{$settings->phone_number_id}/messages", $payload);
-
-            if ($response->successful()) {
-                $responseData = $response->json();
-                $messageId = $responseData['messages'][0]['id'] ?? null;
-
-                // Update log to sent
-                $log->update([
-                    'message_id' => $messageId ?? $log->message_id,
-                    'status' => 'sent',
-                    'metadata' => array_merge($log->metadata ?? [], ['response' => $responseData]),
-                ]);
-
-                return true;
-            } else {
-                // Update log to failed
-                $log->update([
-                    'status' => 'failed',
-                    'metadata' => array_merge($log->metadata ?? [], [
-                        'response' => $response->json(),
-                        'error_message' => $response->body()
-                    ]),
-                ]);
-
-                return false;
-            }
-
-        } catch (\Exception $e) {
-            // Update log to failed
-            $log->update([
-                'status' => 'failed',
-                'metadata' => array_merge($log->metadata ?? [], ['error_message' => $e->getMessage()]),
-            ]);
-
-            return false;
-        }
+        return $this->getProvider($settings)->sendSimpleMessage($settings, $phone, $params, $appointmentId);
     }
 
     /**
-     * Send template message via Meta WhatsApp Cloud API
+     * Unified send template message method called by background jobs
      */
-    public function sendTemplateMessage($settings, string $phone, string $templateName, array $params = [], ?int $appointmentId = null): bool
-    {
-        $clinicId = $settings->clinic_id;
-
-        // Prepare payload
-        $payload = [
-            'messaging_product' => 'whatsapp',
-            'to' => $phone,
-            'type' => 'template',
-            'template' => [
-                'name' => $templateName,
-                'language' => ['code' => 'en'],
-            ],
-        ];
-
-        // Create log entry (pending)
-        $log = WhatsAppMessage::create([
-            'clinic_id' => $clinicId,
-            'message_id' => 'pending_' . uniqid(),
-            'direction' => 'outgoing',
-            'to' => $phone,
-            'from' => $settings->phone_number_id,
-            'type' => 'template',
-            'body' => "Template: $templateName",
-            'metadata' => [
-                'payload' => $payload,
-                'template_name' => $templateName,
-                'appointment_id' => $appointmentId
-            ],
-            'status' => 'pending',
-        ]);
-
-        try {
-            // Call Meta WhatsApp Cloud API
-            $response = Http::withToken($settings->access_token)
-                ->post("https://graph.facebook.com/v20.0/{$settings->phone_number_id}/messages", $payload);
-
-            if ($response->successful()) {
-                $responseData = $response->json();
-                $messageId = $responseData['messages'][0]['id'] ?? null;
-
-                // Update log to sent
-                $log->update([
-                    'message_id' => $messageId ?? $log->message_id,
-                    'status' => 'sent',
-                    'metadata' => array_merge($log->metadata ?? [], ['response' => $responseData]),
-                ]);
-
-                return true;
-            } else {
-                // Update log to failed
-                $log->update([
-                    'status' => 'failed',
-                    'metadata' => array_merge($log->metadata ?? [], [
-                        'response' => $response->json(),
-                        'error_message' => $response->body()
-                    ]),
-                ]);
-
-                return false;
-            }
-
-        } catch (\Exception $e) {
-            // Update log to failed
-            $log->update([
-                'status' => 'failed',
-                'metadata' => array_merge($log->metadata ?? [], ['error_message' => $e->getMessage()]),
-            ]);
-
-            return false;
-        }
+    public function sendTemplateMessage(
+        $settings,
+        string $phone,
+        string $templateName,
+        array $params = [],
+        ?int
+        $appointmentId = null
+    ): bool {
+        return $this->getProvider($settings)->sendTemplateMessage($settings, $phone, $templateName, $params, $appointmentId);
     }
 
     /**
@@ -225,18 +103,12 @@ class WhatsAppService
                 "JazakAllah Khair!";
         }
 
-        $clinicName = $appointment->clinic->name;
-        $patientName = $appointment->patient->name;
-        $doctorName = $appointment->doctor->name;
-        $date = \Carbon\Carbon::parse($appointment->appointment_date)->format('d M Y');
-        $time = \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A');
-
         $replace = [
-            '{clinic_name}' => $clinicName,
-            '{patient_name}' => $patientName,
-            '{doctor_name}' => $doctorName,
-            '{date}' => $date,
-            '{time}' => $time,
+            '{clinic_name}' => $appointment->clinic->name,
+            '{patient_name}' => $appointment->patient->name,
+            '{doctor_name}' => $appointment->doctor->name,
+            '{date}' => \Carbon\Carbon::parse($appointment->appointment_date)->format('d M Y'),
+            '{time}' => \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A'),
         ];
 
         return strtr($template, $replace);
@@ -245,12 +117,10 @@ class WhatsAppService
     /**
      * Format phone number for WhatsApp (Pakistan format)
      */
-    private function formatPhoneNumber(string $phone): string
+    public function formatPhoneNumber(string $phone): string
     {
-        // Remove all non-numeric characters
         $phone = preg_replace('/[^0-9]/', '', $phone);
 
-        // Add Pakistan country code if not present
         if (!str_starts_with($phone, '92')) {
             if (str_starts_with($phone, '0')) {
                 $phone = '92' . substr($phone, 1);

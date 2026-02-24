@@ -122,4 +122,41 @@ class ClinicManagementController extends Controller
 
         return redirect()->back()->with('success', "Clinic \"{$clinic->name}\" has been {$status}.");
     }
+
+    /**
+     * Update allowed WhatsApp providers for a clinic.
+     */
+    public function updateWhatsAppProviders(Request $request, Clinic $clinic)
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'provider' => 'required|in:meta,js_api',
+            'js_api_url' => 'nullable|url',
+            'js_api_key' => 'nullable|string',
+            'js_session_id' => 'nullable|string',
+        ]);
+
+        $clinic->update([
+            'allowed_whatsapp_providers' => [$request->provider],
+        ]);
+
+        // Automatically update/create settings for this clinic with the provided technical details
+        $settingsData = ['provider' => $request->provider];
+        if ($request->has('js_api_url'))
+            $settingsData['js_api_url'] = $request->js_api_url;
+        if ($request->has('js_api_key'))
+            $settingsData['js_api_key'] = $request->js_api_key;
+        if ($request->has('js_session_id'))
+            $settingsData['js_session_id'] = $request->js_session_id;
+
+        \App\Models\ClinicWhatsappSetting::updateOrCreate(
+            ['clinic_id' => $clinic->id],
+            $settingsData
+        );
+
+        return redirect()->back()->with('success', "WhatsApp configuration for \"{$clinic->name}\" updated successfully.");
+    }
 }

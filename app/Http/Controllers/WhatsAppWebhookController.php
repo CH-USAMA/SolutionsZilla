@@ -119,7 +119,10 @@ class WhatsAppWebhookController extends Controller
 
         // Find setting by Instance ID or Phone ID
         $setting = ClinicWhatsappSetting::withoutGlobalScopes()
-            ->where('phone_number_id', (string) $idInstance)
+            ->where(function ($q) use ($idInstance) {
+                $q->where('phone_number_id', (string) $idInstance)
+                    ->orWhere('js_session_id', (string) $idInstance);
+            })
             ->first();
 
         if (!$setting) {

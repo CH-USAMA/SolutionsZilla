@@ -50,6 +50,8 @@ return [
     'whatsapp' => [
         'verify_token' => env('WHATSAPP_VERIFY_TOKEN', 'usama1234'),
         'app_secret' => env('WHATSAPP_APP_SECRET'),
+        'js_api_url' => env('WHATSAPP_JS_API_URL'),
+        'js_api_key' => env('WHATSAPP_JS_API_KEY'),
     ],
 
 ];

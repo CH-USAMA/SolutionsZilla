@@ -30,6 +30,7 @@ class Clinic extends Model
         'trial_ends_at',
         'subscription_ends_at',
         'is_active',
+        'allowed_whatsapp_providers',
     ];
 
     protected $casts = [
@@ -41,6 +42,7 @@ class Clinic extends Model
         'is_active' => 'boolean',
         'setup_fee' => 'decimal:2',
         'monthly_fee' => 'decimal:2',
+        'allowed_whatsapp_providers' => 'array',
     ];
 
     /**

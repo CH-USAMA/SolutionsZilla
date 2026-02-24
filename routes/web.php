@@ -75,6 +75,7 @@ Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
     Route::get('/sms/logs', [\App\Http\Controllers\SmsSettingsController::class, 'logs'])->name('sms.logs');
     Route::post('/whatsapp/test', [WhatsAppSettingsController::class, 'test'])->name('whatsapp.test');
     Route::post('/whatsapp/create-test-appointment', [WhatsAppSettingsController::class, 'createTestAppointment'])->name('whatsapp.test.appointment');
+    Route::get('/whatsapp/qr', [WhatsAppSettingsController::class, 'getQrCode'])->name('whatsapp.qr');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -115,6 +116,7 @@ Route::middleware(['auth', 'role:super_admin'])->group(function () {
     Route::get('/super-admin/clinics/create', [ClinicManagementController::class, 'create'])->name('super-admin.clinics.create');
     Route::post('/super-admin/clinics', [ClinicManagementController::class, 'store'])->name('super-admin.clinics.store');
     Route::patch('/super-admin/clinics/{clinic}/plan', [ClinicManagementController::class, 'updatePlan'])->name('super-admin.clinics.update-plan');
+    Route::patch('/super-admin/clinics/{clinic}/update-providers', [ClinicManagementController::class, 'updateWhatsAppProviders'])->name('super-admin.clinics.update-providers');
     Route::patch('/super-admin/clinics/{clinic}/toggle-status', [ClinicManagementController::class, 'toggleStatus'])->name('super-admin.clinics.toggle-status');
 
     // Super Admin User Management

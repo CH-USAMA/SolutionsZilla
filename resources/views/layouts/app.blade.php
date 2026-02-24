@@ -142,12 +142,12 @@
     <!-- SweetAlert2 Integration -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             @if(session('success'))
                 Swal.fire({
                     icon: 'success',
                     title: 'Success!',
-                    text: "{{ session('success') }}",
+                    text: {!! json_encode(session('success')) !!},
                     timer: 3000,
                     timerProgressBar: true,
                     confirmButtonColor: '#2563eb'
@@ -158,7 +158,7 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
-                    text: "{{ session('error') }}",
+                    text: {!! json_encode(session('error')) !!},
                     confirmButtonColor: '#2563eb'
                 });
             @endif
@@ -168,10 +168,10 @@
                     icon: 'error',
                     title: 'Validation Error',
                     html: `<ul class="text-left text-sm">
-                        @foreach($errors->all() as $error)
-                            <li>• {{ $error }}</li>
-                        @endforeach
-                    </ul>`,
+                            @foreach($errors->all() as $error)
+                                <li>• {{ $error }}</li>
+                            @endforeach
+                        </ul>`,
                     confirmButtonColor: '#2563eb'
                 });
             @endif
