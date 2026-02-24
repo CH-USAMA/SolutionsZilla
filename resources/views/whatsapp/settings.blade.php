@@ -179,35 +179,42 @@
                                                  .then(data => {
                                                      if (data.status === 'connected') {
                                                          container.innerHTML = `
-                                                             <div class="w-48 h-48 flex flex-col items-center justify-center text-green-600 p-4 text-center">
-                                                                 <svg class="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                                 </svg>
-                                                                 <p class="font-bold text-sm">WhatsApp Connected!</p>
-                                                                 <p class="text-xs text-gray-500 mt-1">You are ready to send messages.</p>
-                                                             </div>
+                                                              <div class="w-48 h-48 flex flex-col items-center justify-center text-green-600 p-4 text-center">
+                                                                  <svg class="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                                  </svg>
+                                                                  <p class="font-bold text-sm">WhatsApp Connected!</p>
+                                                                  <p class="text-xs text-gray-500 mt-1">You are ready to send messages.</p>
+                                                              </div>
                                                          `;
-                                                         // Update status badge if exists
                                                          const badge = document.getElementById('connection-status-badge');
                                                          if (badge) {
                                                              badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
                                                              badge.innerText = 'Connected';
                                                          }
-                                                         
                                                          if (statusPollingInterval) clearInterval(statusPollingInterval);
                                                      } else if (data.qr) {
                                                          container.innerHTML = `<img src="${data.qr}" alt="WhatsApp QR Code" class="w-48 h-48" />`;
-                                                         
-                                                         // Start polling if not already polling
+                                                         if (!statusPollingInterval) {
+                                                             statusPollingInterval = setInterval(loadQrCode, 5000);
+                                                         }
+                                                     } else if (data.message && data.message.includes('wait')) {
+                                                         // Gateway is initializing but QR not ready. Keep polling.
+                                                         container.innerHTML = `<div class="w-48 h-48 flex flex-col items-center justify-center text-indigo-600 p-4 text-center text-xs">
+                                                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
+                                                            <p>${data.message}</p>
+                                                         </div>`;
                                                          if (!statusPollingInterval) {
                                                              statusPollingInterval = setInterval(loadQrCode, 5000);
                                                          }
                                                      } else {
                                                          container.innerHTML = '<div class="w-48 h-48 flex flex-col items-center justify-center text-red-500 p-4 text-center text-xs">Failed to load QR. Error: ' + (data.error || 'Waiting for gateway...') + '</div>';
+                                                         if (!statusPollingInterval) statusPollingInterval = setInterval(loadQrCode, 10000);
                                                      }
                                                  })
                                                  .catch(err => {
-                                                     container.innerHTML = '<div class="w-48 h-48 flex items-center justify-center text-red-500 text-xs text-center p-2">Error connecting to server. Please check JS API configuration.</div>';
+                                                     container.innerHTML = '<div class="w-48 h-48 flex items-center justify-center text-red-500 text-xs text-center p-2">Error connecting to server. Retrying...</div>';
+                                                     if (!statusPollingInterval) statusPollingInterval = setInterval(loadQrCode, 10000);
                                                  });
                                          }
                                          document.addEventListener('DOMContentLoaded', function() {
@@ -298,55 +305,55 @@
                             <div class="flex items-center gap-4">
                                 <x-primary-button>{{ __('Save Settings') }}</x-primary-button>
                             </div>
-                        </form>
+                    </form>
 
-                        <hr class="my-8">
+                    <hr class="my-8">
 
-                        <div class="mt-8">
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">Test Integration</h3>
-                            <p class="text-sm text-gray-600 mb-6">Send a sample message to verify your connection is working correctly.
-                            </p>
+                    <div class="mt-8">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Test Integration</h3>
+                        <p class="text-sm text-gray-600 mb-6">Send a sample message to verify your connection is working correctly.
+                        </p>
 
-                            <div class="bg-gray-50 p-6 rounded-xl border border-gray-100">
-                                <form method="POST" action="{{ route('whatsapp.test') }}" class="space-y-4">
-                                    @csrf
-                                    @if($selectedClinicId)
-                                        <input type="hidden" name="clinic_id" value="{{ $selectedClinicId }}">
-                                    @endif
-                                    
-                                    <div class="max-w-md">
-                                        <x-input-label for="test_phone" value="Recipient Phone Number" />
-                                        <div class="flex mt-1 gap-2">
-                                            <x-text-input id="test_phone" name="test_phone" type="text" 
-                                                class="block w-full" placeholder="e.g. 923001234567" 
-                                                required :value="old('test_phone')" />
-                                            <x-secondary-button type="submit" class="whitespace-nowrap">
-                                                {{ __('Send Test') }}
-                                            </x-secondary-button>
-                                        </div>
-                                        <x-input-error :messages="$errors->get('test_phone')" class="mt-2" />
-                                        <p class="mt-2 text-[10px] text-gray-500">
-                                            Enter the number with country code (e.g., 92 for Pakistan).
-                                        </p>
-                                    </div>
-                                </form>
-
-                                @if(Auth::user()->isSuperAdmin())
-                                    <div class="mt-6 pt-6 border-t border-gray-200">
-                                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Developer Tools</h4>
-                                        <form method="POST" action="{{ route('whatsapp.test.appointment') }}">
-                                            @csrf
-                                            @if($selectedClinicId)
-                                                <input type="hidden" name="clinic_id" value="{{ $selectedClinicId }}">
-                                            @endif
-                                            <x-secondary-button type="submit" class="text-xs">
-                                                {{ __('Create Future Test Appointment (to test Scheduler)') }}
-                                            </x-secondary-button>
-                                        </form>
-                                    </div>
+                        <div class="bg-gray-50 p-6 rounded-xl border border-gray-100">
+                            <form method="POST" action="{{ route('whatsapp.test') }}" class="space-y-4">
+                                @csrf
+                                @if($selectedClinicId)
+                                    <input type="hidden" name="clinic_id" value="{{ $selectedClinicId }}">
                                 @endif
-                            </div>
+                                
+                                <div class="max-w-md">
+                                    <x-input-label for="test_phone" value="Recipient Phone Number" />
+                                    <div class="flex mt-1 gap-2">
+                                        <x-text-input id="test_phone" name="test_phone" type="text" 
+                                            class="block w-full" placeholder="e.g. 923001234567" 
+                                            required :value="old('test_phone')" />
+                                        <x-secondary-button type="submit" class="whitespace-nowrap">
+                                            {{ __('Send Test') }}
+                                        </x-secondary-button>
+                                    </div>
+                                    <x-input-error :messages="$errors->get('test_phone')" class="mt-2" />
+                                    <p class="mt-2 text-[10px] text-gray-500">
+                                        Enter the number with country code (e.g., 92 for Pakistan).
+                                    </p>
+                                </div>
+                            </form>
+
+                            @if(Auth::user()->isSuperAdmin())
+                                <div class="mt-6 pt-6 border-t border-gray-200">
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Developer Tools</h4>
+                                    <form method="POST" action="{{ route('whatsapp.test.appointment') }}">
+                                        @csrf
+                                        @if($selectedClinicId)
+                                            <input type="hidden" name="clinic_id" value="{{ $selectedClinicId }}">
+                                        @endif
+                                        <x-secondary-button type="submit" class="text-xs">
+                                            {{ __('Create Future Test Appointment (to test Scheduler)') }}
+                                        </x-secondary-button>
+                                    </form>
+                                </div>
+                            @endif
                         </div>
+                    </div>
                 @endif
             </div>
         </div>
