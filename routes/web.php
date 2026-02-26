@@ -76,6 +76,7 @@ Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
     Route::post('/whatsapp/test', [WhatsAppSettingsController::class, 'test'])->name('whatsapp.test');
     Route::post('/whatsapp/create-test-appointment', [WhatsAppSettingsController::class, 'createTestAppointment'])->name('whatsapp.test.appointment');
     Route::get('/whatsapp/qr', [WhatsAppSettingsController::class, 'getQrCode'])->name('whatsapp.qr');
+    Route::post('/whatsapp/logout', [WhatsAppSettingsController::class, 'logout'])->name('whatsapp.logout');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -88,6 +89,7 @@ Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
 
     // Staff (Receptionists)
     Route::resource('staff', \App\Http\Controllers\StaffController::class);
+    Route::patch('/staff/{staff}/toggle-status', [\App\Http\Controllers\StaffController::class, 'toggleStatus'])->name('staff.toggle-status');
 
     // Billing
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');

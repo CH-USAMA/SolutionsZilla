@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\User;
+use App\Models\Patient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -48,6 +50,13 @@ class DashboardController extends Controller
             ->limit(50)
             ->get();
 
+        // Additional stats
+        $totalPatients = Patient::where('clinic_id', $clinicId)->count();
+        $activeReceptionists = User::where('clinic_id', $clinicId)
+            ->where('role', User::ROLE_RECEPTIONIST)
+            ->where('is_active', true)
+            ->count();
+
         return view('dashboard', compact(
             'todayAppointments',
             'todayTotal',
@@ -56,7 +65,9 @@ class DashboardController extends Controller
             'monthlyNoShows',
             'upcomingAppointments',
             'startDate',
-            'endDate'
+            'endDate',
+            'totalPatients',
+            'activeReceptionists'
         ));
     }
 }

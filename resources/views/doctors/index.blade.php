@@ -1,17 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight uppercase tracking-wider">
+        <h2 class="font-bold text-lg text-gray-900 leading-tight tracking-tight">
             {{ __('Doctors') }}
         </h2>
     </x-slot>
 
-    <div class="py-12 bg-gray-50 min-h-screen">
+    <div class="py-6 bg-[#f8fafc] min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
+            <div class="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
                 <!-- Card Header -->
                 <div
-                    class="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4 bg-gray-50/50">
-                    <h2 class="text-lg font-bold text-gray-900">All Doctors</h2>
+                    class="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3 bg-gray-50/30">
+                    <h2 class="text-sm font-bold text-gray-900">All Doctors</h2>
                     <div class="flex items-center gap-3">
                         <select id="status_filter"
                             class="text-xs border-gray-200 rounded-lg py-1.5 px-3 focus:ring-indigo-500 focus:border-indigo-500">
@@ -45,30 +45,30 @@
                         <thead class="bg-gray-50/80">
                             <tr>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     No</th>
                                 @if(Auth::user()->isSuperAdmin())
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                         Clinic</th>
                                 @endif
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Name</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Specialization</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Phone</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Email</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Status</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Actions</th>
                             </tr>
                         </thead>

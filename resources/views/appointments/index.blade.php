@@ -1,17 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight uppercase tracking-wider">
+        <h2 class="font-bold text-lg text-gray-900 leading-tight tracking-tight">
             {{ __('Appointments') }}
         </h2>
     </x-slot>
 
-    <div class="py-12 bg-gray-50 min-h-screen">
+    <div class="py-6 bg-[#f8fafc] min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
+            <div class="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
                 <!-- Card Header -->
                 <div
-                    class="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4 bg-gray-50/50">
-                    <h2 class="text-lg font-bold text-gray-900">All Appointments</h2>
+                    class="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3 bg-gray-50/30">
+                    <h2 class="text-sm font-bold text-gray-900">All Appointments</h2>
                     <div class="flex items-center gap-3">
                         <button id="export_csv"
                             class="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold hover:bg-green-100 border border-green-200 transition">
@@ -34,8 +34,8 @@
                 </div>
 
                 <!-- Filters -->
-                <div class="px-6 py-4 border-b border-gray-100 bg-white">
-                    <div class="flex flex-wrap gap-4 items-end">
+                <div class="px-4 py-3 border-b border-gray-100 bg-white">
+                    <div class="flex flex-wrap gap-3 items-end">
                         <div>
                             <label
                                 class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Date</label>
@@ -77,27 +77,27 @@
                         <thead class="bg-gray-50/80">
                             <tr>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     No</th>
                                 @if(Auth::user()->isSuperAdmin())
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                         Clinic</th>
                                 @endif
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Time</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Patient</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Doctor</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Status</th>
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    class="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                     Actions</th>
                             </tr>
                         </thead>

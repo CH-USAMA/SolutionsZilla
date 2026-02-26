@@ -311,4 +311,45 @@ class WhatsAppSettingsController extends Controller
             return response()->json(['error' => $e->getMessage(), 'status' => 'error'], 500);
         }
     }
+
+    /**
+     * Logout / Disconnect from WhatsApp
+     */
+    public function logout(Request $request)
+    {
+        $user = Auth::user();
+        $clinicId = ($user && $user->isSuperAdmin()) ? ($request->clinic_id ?: $user->clinic_id) : ($user ? $user->clinic_id : null);
+
+        if (!$clinicId) {
+            return back()->with('error', 'Clinic not specified');
+        }
+
+        $settings = ClinicWhatsappSetting::where('clinic_id', $clinicId)->first();
+        if (!$settings) {
+            return back()->with('error', 'WhatsApp settings not found');
+        }
+
+        try {
+            $baseUrl = $settings->js_api_url ?: config('services.whatsapp.js_api_url');
+            $session = $settings->js_session_id;
+            $apiKey = $settings->js_api_key ?: config('services.whatsapp.js_api_key');
+
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'x-api-key' => $apiKey
+            ])->timeout(15)->post($baseUrl . "/sessions/logout/{$session}");
+
+            // Update local DB status
+            $settings->update(['js_connection_status' => 'disconnected']);
+
+            if ($response->successful()) {
+                return back()->with('success', 'WhatsApp session logged out successfully. You can reconnect by scanning a new QR code.');
+            }
+
+            return back()->with('error', 'Failed to reach WhatsApp gateway');
+        } catch (\Exception $e) {
+            Log::error("WhatsApp Logout failed: " . $e->getMessage());
+            $settings->update(['js_connection_status' => 'disconnected']);
+            return back()->with('error', 'Logout failed: ' . $e->getMessage());
+        }
+    }
 }

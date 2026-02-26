@@ -9,8 +9,10 @@
     <title>{{ config('app.name', 'Solution Zilla') }}</title>
 
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -41,13 +43,13 @@
     </script>
 </head>
 
-<body class="font-sans antialiased bg-gray-50" x-data="{ sidebarOpen: false }">
+<body class="antialiased bg-gray-50" style="font-family: 'Inter', sans-serif;" x-data="{ sidebarOpen: false }">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         @include('layouts.sidebar')
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col overflow-hidden lg:ml-64">
+        <div class="flex-1 flex flex-col overflow-hidden lg:ml-[220px]">
             <!-- Top Bar -->
             <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 z-10">
                 <div class="flex items-center">
@@ -168,10 +170,10 @@
                     icon: 'error',
                     title: 'Validation Error',
                     html: `<ul class="text-left text-sm">
-                            @foreach($errors->all() as $error)
-                                <li>• {{ $error }}</li>
-                            @endforeach
-                        </ul>`,
+                                @foreach($errors->all() as $error)
+                                    <li>• {{ $error }}</li>
+                                @endforeach
+                            </ul>`,
                     confirmButtonColor: '#2563eb'
                 });
             @endif

@@ -216,6 +216,41 @@ app.get('/sessions/qr/:session', authMiddleware, async (req, res) => {
 });
 
 /**
+ * Logout / Disconnect a session
+ */
+app.post('/sessions/logout/:session', authMiddleware, async (req, res) => {
+    const sessionId = req.params.session;
+    logToFile(`[ENDPOINT] POST /sessions/logout/${sessionId}`);
+    const sessionData = sessions.get(sessionId);
+
+    if (!sessionData) {
+        return res.json({ status: 'disconnected', message: 'Session was not active' });
+    }
+
+    try {
+        if (sessionData.client) {
+            await sessionData.client.logout();
+            await sessionData.client.destroy();
+        }
+        sessions.delete(sessionId);
+
+        // Remove local auth folder for clean re-login
+        const authPath = path.join(__dirname, '.wwebjs_auth', `session-${sessionId}`);
+        if (fs.existsSync(authPath)) {
+            fs.rmSync(authPath, { recursive: true, force: true });
+            logToFile(`Removed auth data for ${sessionId}`);
+        }
+
+        logToFile(`Session ${sessionId} logged out successfully`);
+        res.json({ status: 'disconnected', message: 'Logged out successfully' });
+    } catch (err) {
+        logToFile(`Error logging out ${sessionId}:`, err);
+        sessions.delete(sessionId);
+        res.json({ status: 'disconnected', message: 'Session cleared (with errors)' });
+    }
+});
+
+/**
  * Send a message
  */
 app.post('/messages/send', authMiddleware, async (req, res) => {
