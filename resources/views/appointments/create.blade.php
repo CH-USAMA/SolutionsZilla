@@ -13,30 +13,80 @@
                         @csrf
 
                         <!-- Patient Info Section -->
-                        <div class="mb-6">
+                        <div class="mb-6" x-data="{ 
+                            query: '{{ old('patient_name', $preSelectedPatient->name ?? '') }}',
+                            patients: [],
+                            showDropdown: false,
+                            selectedPatientId: null,
+                            phone: '{{ old('patient_phone', $preSelectedPatient->phone ?? '') }}',
+                            email: '{{ old('patient_email', $preSelectedPatient->email ?? '') }}',
+                            dob: '{{ old('patient_dob', ($preSelectedPatient && $preSelectedPatient->date_of_birth) ? $preSelectedPatient->date_of_birth->format('Y-m-d') : '') }}',
+                            address: '{{ old('patient_address', $preSelectedPatient->address ?? '') }}',
+                            showAdvanced: {{ (old('show_advanced') || isset($preSelectedPatient)) ? 'true' : 'false' }},
+
+                            async searchPatients() {
+                                if (this.query.length < 2) {
+                                    this.patients = [];
+                                    this.showDropdown = false;
+                                    return;
+                                }
+
+                                try {
+                                    const response = await fetch(`{{ route('patients.search') }}?q=${encodeURIComponent(this.query)}`);
+                                    this.patients = await response.json();
+                                    this.showDropdown = this.patients.length > 0;
+                                } catch (error) {
+                                    console.error('Search failed:', error);
+                                }
+                            },
+
+                            selectPatient(patient) {
+                                this.query = patient.name;
+                                this.phone = patient.phone;
+                                this.email = patient.email || '';
+                                this.dob = patient.dob || '';
+                                this.address = patient.address || '';
+                                this.selectedPatientId = patient.id;
+                                this.showDropdown = false;
+                                if (this.dob || this.address) this.showAdvanced = true;
+                            }
+                        }">
                             <h3 class="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Patient Details</h3>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4"
-                                x-data="{ showAdvanced: {{ old('show_advanced') ? 'true' : 'false' }} }">
-                                <div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="relative">
                                     <x-input-label for="patient_name" value="Patient Name" />
                                     <x-text-input id="patient_name" class="block mt-1 w-full" type="text"
-                                        name="patient_name" :value="old('patient_name')" required />
+                                        name="patient_name" x-model="query" @input.debounce.300ms="searchPatients()"
+                                        @click.away="showDropdown = false" required autocomplete="off" />
+
+                                    <!-- Autocomplete Dropdown -->
+                                    <div x-show="showDropdown"
+                                        class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+                                        x-transition>
+                                        <template x-for="patient in patients" :key="patient.id">
+                                            <div @click="selectPatient(patient)"
+                                                class="px-4 py-2 cursor-pointer hover:bg-indigo-50 border-b border-gray-100 last:border-0">
+                                                <div class="font-bold text-sm text-gray-900" x-text="patient.name">
+                                                </div>
+                                                <div class="text-xs text-gray-500" x-text="patient.phone"></div>
+                                            </div>
+                                        </template>
+                                    </div>
                                     <x-input-error :messages="$errors->get('patient_name')" class="mt-2" />
                                 </div>
 
                                 <div>
                                     <x-input-label for="patient_phone" value="Phone Number" />
                                     <x-text-input id="patient_phone" class="block mt-1 w-full" type="text"
-                                        name="patient_phone" :value="old('patient_phone')" placeholder="03001234567"
-                                        required />
+                                        name="patient_phone" x-model="phone" placeholder="03001234567" required />
                                     <x-input-error :messages="$errors->get('patient_phone')" class="mt-2" />
                                 </div>
 
                                 <div class="col-span-1 md:col-span-2">
                                     <x-input-label for="patient_email" value="Email (Optional)" />
                                     <x-text-input id="patient_email" class="block mt-1 w-full" type="email"
-                                        name="patient_email" :value="old('patient_email')" />
+                                        name="patient_email" x-model="email" />
                                     <x-input-error :messages="$errors->get('patient_email')" class="mt-2" />
                                 </div>
 
@@ -57,15 +107,13 @@
                                         <div>
                                             <x-input-label for="patient_dob" value="Date of Birth" />
                                             <x-text-input id="patient_dob" class="block mt-1 w-full" type="date"
-                                                name="patient_dob" :value="old('patient_dob')"
-                                                max="{{ date('Y-m-d') }}" />
+                                                name="patient_dob" x-model="dob" max="{{ date('Y-m-d') }}" />
                                             <x-input-error :messages="$errors->get('patient_dob')" class="mt-2" />
                                         </div>
                                         <div>
                                             <x-input-label for="patient_address" value="Address" />
                                             <x-text-input id="patient_address" class="block mt-1 w-full" type="text"
-                                                name="patient_address" :value="old('patient_address')"
-                                                placeholder="Full Address" />
+                                                name="patient_address" x-model="address" placeholder="Full Address" />
                                             <x-input-error :messages="$errors->get('patient_address')" class="mt-2" />
                                         </div>
                                     </div>

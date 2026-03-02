@@ -42,6 +42,7 @@ Route::middleware(['auth', 'verified', 'clinic.tenant'])->group(function () {
     Route::resource('doctors', DoctorController::class);
 
     // Patients
+    Route::get('/patients/search', [PatientController::class, 'search'])->name('patients.search');
     Route::resource('patients', PatientController::class);
     Route::post('/patients/{patient}/documents', [PatientController::class, 'uploadDocument'])
         ->name('patients.documents.upload');
@@ -124,8 +125,11 @@ Route::middleware(['auth', 'role:super_admin'])->group(function () {
     Route::patch('/super-admin/clinics/{clinic}/toggle-status', [ClinicManagementController::class, 'toggleStatus'])->name('super-admin.clinics.toggle-status');
 
     // Super Admin User Management
-    Route::get('/super-admin/users', [\App\Http\Controllers\UserController::class, 'index'])->name('super-admin.users.index');
+    Route::resource('/super-admin/users', \App\Http\Controllers\UserController::class, ['as' => 'super-admin']);
     Route::patch('/super-admin/users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword'])->name('super-admin.users.reset-password');
+
+    // Super Admin Role & Permission Management
+    Route::resource('/super-admin/roles', \App\Http\Controllers\SuperAdmin\RolePermissionController::class, ['as' => 'super-admin'])->except(['show']);
 
     // API Explorer
     Route::get('/super-admin/api-explorer', [\App\Http\Controllers\SuperAdmin\ApiExplorerController::class, 'index'])->name('super-admin.api-explorer');

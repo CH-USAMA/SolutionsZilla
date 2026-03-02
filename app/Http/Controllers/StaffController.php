@@ -17,10 +17,12 @@ class StaffController extends Controller
     {
         if ($request->ajax()) {
             $user = auth()->user();
-            $query = User::where('role', User::ROLE_RECEPTIONIST);
+            // Show all clinic users except Super Admins for Clinic Admins, or all users for Super Admin
+            $query = User::query();
 
             if (!$user->isSuperAdmin()) {
-                $query->where('clinic_id', $user->clinic_id);
+                $query->where('clinic_id', $user->clinic_id)
+                    ->where('role', '!=', User::ROLE_SUPER_ADMIN);
             }
 
             $query->latest();
@@ -82,7 +84,8 @@ class StaffController extends Controller
      */
     public function create()
     {
-        return view('staff.create');
+        $roles = \Spatie\Permission\Models\Role::where('name', '!=', User::ROLE_SUPER_ADMIN)->get();
+        return view('staff.create', compact('roles'));
     }
 
     /**
@@ -97,20 +100,24 @@ class StaffController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'role' => ['required', 'exists:roles,name'],
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => User::ROLE_RECEPTIONIST,
+            'plain_password' => $request->password,
+            'role' => $request->role, // Fallback to column for existing logic
             'clinic_id' => $clinicId,
             'phone' => $request->phone,
             'is_active' => true,
         ]);
 
+        $user->assignRole($request->role);
+
         return redirect()->route('staff.index')
-            ->with('success', 'Receptionist account created successfully.');
+            ->with('success', 'Staff account created successfully.');
     }
 
     /**
@@ -122,11 +129,10 @@ class StaffController extends Controller
         if ($staff->clinic_id !== auth()->user()->clinic_id && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
-        if (!$staff->isReceptionist()) {
-            abort(404);
-        }
 
-        return view('staff.edit', compact('staff'));
+        $roles = \Spatie\Permission\Models\Role::where('name', '!=', User::ROLE_SUPER_ADMIN)->get();
+
+        return view('staff.edit', compact('staff', 'roles'));
     }
 
     /**
@@ -143,6 +149,7 @@ class StaffController extends Controller
             'email' => ['required', 'email', Rule::unique('users')->ignore($staff->id)],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'role' => ['required', 'exists:roles,name'],
         ]);
 
         $data = [
@@ -153,12 +160,16 @@ class StaffController extends Controller
 
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
+            $data['plain_password'] = $request->password;
         }
 
+        $data['role'] = $request->role; // Sync with column for legacy checks
+
         $staff->update($data);
+        $staff->syncRoles([$request->role]);
 
         return redirect()->route('staff.index')
-            ->with('success', 'Receptionist account updated successfully.');
+            ->with('success', 'Staff account updated successfully.');
     }
 
     /**

@@ -180,7 +180,10 @@ class WhatsAppSettingsController extends Controller
         }
 
         $request->validate([
-            'test_phone' => 'required|string|min:10',
+            'test_phone' => ['required', 'string', 'regex:/^[0-9]{10,15}$/'],
+            'test_message' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'test_phone.regex' => 'The destination number must be between 10-15 digits and contain only numbers.',
         ]);
 
         $clinic = \App\Models\Clinic::find($clinicId);
@@ -191,15 +194,16 @@ class WhatsAppSettingsController extends Controller
         }
 
         $testPhone = $request->input('test_phone');
+        $customContent = $request->input('test_message');
 
         $service = app(WhatsAppService::class);
 
-        // Build a more personal test message using clinic details
-        $testMessage = "Hello from *{$clinic->name}*! \n\n" .
+        // Build a default test message if no custom content is provided
+        $testMessage = $customContent ?: ("Hello from *{$clinic->name}*! \n\n" .
             "This is a test message to verify our WhatsApp integration via " .
             ($settings->provider === 'js_api' ? "WhatsApp JS API" : "Meta Cloud API") . ". \n\n" .
             "If you received this, your system is ready to send automated appointment reminders. \n" .
-            "Generated on: " . now()->format('d M Y, h:i A');
+            "Generated on: " . now()->format('d M Y, h:i A'));
 
         if ($settings->message_type === 'text' || $settings->provider === 'js_api') {
             $result = $service->sendSimpleMessage(
@@ -208,7 +212,8 @@ class WhatsAppSettingsController extends Controller
                 ['message' => $testMessage]
             );
         } else {
-            // For Meta, still use template if configured
+            // For Meta, use template but pass the custom message as a parameter if needed 
+            // Note: Meta templates usually have fixed variables, so we pass it in the params array
             $result = $service->sendTemplateMessage(
                 $settings,
                 $testPhone,

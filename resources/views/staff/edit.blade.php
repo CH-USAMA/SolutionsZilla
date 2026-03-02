@@ -70,6 +70,20 @@
                                 placeholder="+923001234567">
                             @error('phone') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">User
+                                Role <span class="text-red-500">*</span></label>
+                            <select name="role"
+                                class="w-full border-gray-200 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500 py-2.5 px-4 bg-gray-50/50"
+                                required>
+                                @foreach($roles as $role)
+                                    <option value="{{ $role->name }}" {{ (old('role', $staff->roles->first()->name ?? $staff->role) == $role->name) ? 'selected' : '' }}>
+                                        {{ ucwords(str_replace('_', ' ', $role->name)) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('role') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                        </div>
                     </div>
 
                     <div class="pt-5 border-t border-gray-100 flex justify-end gap-3">

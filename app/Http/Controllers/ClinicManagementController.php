@@ -68,14 +68,16 @@ class ClinicManagementController extends Controller
         ]);
 
         // Create Admin User
-        User::create([
+        $user = User::create([
             'name' => $request->admin_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => User::ROLE_CLINIC_ADMIN,
-            'clinic_id' => $clinic->id,
+            'clinic_id' => $clinic_id ?? $clinic->id,
             'is_active' => true,
         ]);
+
+        $user->assignRole(User::ROLE_CLINIC_ADMIN);
 
         return redirect()->route('super-admin.clinics.index')->with('success', 'Clinic and Admin User created successfully.');
     }

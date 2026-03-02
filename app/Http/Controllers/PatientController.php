@@ -21,6 +21,43 @@ class PatientController extends Controller
     }
 
     /**
+     * Search for existing patients (Autocomplete)
+     */
+    public function search(Request $request)
+    {
+        $query = $request->get('q');
+        $user = auth()->user();
+
+        if (!$query || strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $patients = Patient::query()
+            ->where(function ($w) use ($query) {
+                $w->where('name', 'LIKE', "%$query%")
+                    ->orWhere('phone', 'LIKE', "%$query%")
+                    ->orWhere('email', 'LIKE', "%$query%");
+            });
+
+        if (!$user->isSuperAdmin()) {
+            $patients->forClinic($user->clinic_id);
+        }
+
+        $results = $patients->limit(10)->get()->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'phone' => $p->phone,
+                'email' => $p->email,
+                'dob' => $p->date_of_birth ? $p->date_of_birth->format('Y-m-d') : null,
+                'address' => $p->address,
+            ];
+        });
+
+        return response()->json($results);
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -47,8 +84,11 @@ class PatientController extends Controller
                 ->addColumn('action', function ($row) {
                     $viewUrl = route('patients.show', $row->id);
                     $editUrl = route('patients.edit', $row->id);
+                    $bookUrl = route('appointments.create', ['patient_id' => $row->id]);
+
                     $btn = '<a href="' . $viewUrl . '" class="text-indigo-600 hover:text-indigo-900 mr-2">View</a>';
-                    $btn .= '<a href="' . $editUrl . '" class="text-gray-600 hover:text-gray-900">Edit</a>';
+                    $btn .= '<a href="' . $editUrl . '" class="text-gray-600 hover:text-gray-900 mr-2">Edit</a>';
+                    $btn .= '<a href="' . $bookUrl . '" class="text-emerald-600 hover:text-emerald-900 font-bold">Book</a>';
                     return $btn;
                 })
                 ->editColumn('age_gender', function ($row) {

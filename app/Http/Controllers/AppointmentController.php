@@ -122,7 +122,7 @@ class AppointmentController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
         $user = auth()->user();
         $isSuperAdmin = $user->isSuperAdmin();
@@ -133,7 +133,16 @@ class AppointmentController extends Controller
         }
         $doctors = $doctorQuery->get();
 
-        return view('appointments.create', compact('doctors'));
+        $preSelectedPatient = null;
+        if ($request->has('patient_id')) {
+            $preSelectedPatient = Patient::find($request->patient_id);
+            // Basic security check
+            if ($preSelectedPatient && !$isSuperAdmin && $preSelectedPatient->clinic_id !== $user->clinic_id) {
+                $preSelectedPatient = null;
+            }
+        }
+
+        return view('appointments.create', compact('doctors', 'preSelectedPatient'));
     }
 
     /**

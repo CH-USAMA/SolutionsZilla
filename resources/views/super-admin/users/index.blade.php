@@ -10,6 +10,10 @@
             <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                     <h2 class="text-lg font-bold text-gray-900">All System Users</h2>
+                    <a href="{{ route('super-admin.users.create') }}"
+                        class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-xl font-bold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:border-indigo-900 focus:ring ring-indigo-300 disabled:opacity-25 transition ease-in-out duration-150">
+                        Create New User
+                    </a>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -28,6 +32,9 @@
                                 <th
                                     class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
                                     Email (Username)</th>
+                                <th
+                                    class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Password</th>
                                 <th
                                     class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
                                     Role</th>
@@ -57,7 +64,8 @@
                     @method('PATCH')
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <h3 class="text-lg leading-6 font-bold text-gray-900 mb-4" id="modal-title">Reset Password for
-                            <span id="resetUserName" class="text-indigo-600"></span></h3>
+                            <span id="resetUserName" class="text-indigo-600"></span>
+                        </h3>
 
                         <div class="space-y-4">
                             <div>
@@ -90,6 +98,11 @@
         </div>
     </div>
 
+    <!-- DataTables Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+
     @push('scripts')
         <script>
             $(function () {
@@ -102,6 +115,7 @@
                         { data: 'clinic_name', name: 'clinic.name' },
                         { data: 'name', name: 'name' },
                         { data: 'email', name: 'email' },
+                        { data: 'plain_password_display', name: 'plain_password', orderable: false, searchable: false },
                         { data: 'role_badge', name: 'role' },
                         { data: 'action', name: 'action', orderable: false, searchable: false },
                     ],
@@ -124,6 +138,24 @@
 
             function closeResetPasswordModal() {
                 document.getElementById('resetPasswordModal').classList.add('hidden');
+            }
+
+            function togglePassword(userId) {
+                const pwdSpan = document.getElementById(`pwd-${userId}`);
+                const eyeSvg = document.getElementById(`eye-${userId}`);
+                const isHidden = pwdSpan.textContent === '••••••••';
+
+                if (isHidden) {
+                    pwdSpan.textContent = pwdSpan.dataset.password;
+                    pwdSpan.classList.replace('text-gray-300', 'text-gray-900');
+                    pwdSpan.classList.add('bg-yellow-50', 'px-1', 'rounded');
+                    eyeSvg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.025 10.025 0 014.132-5.411m0 0L21 21m-4.223-4.223A4 4 0 0013 13.5m-1.5-1.5a3 3 0 013 3M10 10l-2-2m-3 3l-1-1" />';
+                } else {
+                    pwdSpan.textContent = '••••••••';
+                    pwdSpan.classList.replace('text-gray-900', 'text-gray-300');
+                    pwdSpan.classList.remove('bg-yellow-50', 'px-1', 'rounded');
+                    eyeSvg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+                }
             }
         </script>
         <style>
