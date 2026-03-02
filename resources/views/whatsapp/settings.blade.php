@@ -44,9 +44,9 @@
                     @endphp
 
                     <form method="POST" action="{{ route('whatsapp.settings.update') }}" class="space-y-6" x-data="{ 
-                                                        provider: '{{ $defaultProvider }}',
-                                                        messageType: '{{ $settings->message_type ?? 'template' }}'
-                                                    }" autocomplete="off">
+                                                            provider: '{{ $defaultProvider }}',
+                                                            messageType: '{{ $settings->message_type ?? 'template' }}'
+                                                        }" autocomplete="off">
                         @csrf
 
                         <!-- Provider Selection -->
@@ -137,13 +137,9 @@
                                     </span>
                                     @if(($settings->js_connection_status ?? '') === 'connected')
                                         <form method="POST" action="{{ route('whatsapp.logout') }}" class="inline ml-2"
-                                            onsubmit="return confirm('Are you sure you want to logout from WhatsApp? You will need to scan the QR code again to reconnect.');">
-                                            @csrf
-                                            @if($selectedClinicId)
-                                                <input type="hidden" name="clinic_id" value="{{ $selectedClinicId }}">
-                                            @endif
-                                            <button type="submit"
-                                                class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition shadow-sm">
+                                            @if(($settings->js_connection_status ?? '') === 'connected') <button type="button"
+                                                onclick="if(confirm('Are you sure you want to logout from WhatsApp? You will need to scan the QR code again to reconnect.')) document.getElementById('whatsapp-logout-form').submit();"
+                                                class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition shadow-sm ml-2">
                                                 <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -151,8 +147,8 @@
                                                     </path>
                                                 </svg>
                                                 Logout from WhatsApp
-                                            </button>
-                                        </form>
+                                                </button>
+                                            @endif
                                     @endif
                                 </div>
 
@@ -201,14 +197,14 @@
                                                 .then(data => {
                                                     if (data.status === 'connected') {
                                                         container.innerHTML = `
-                                                                      <div class="w-48 h-48 flex flex-col items-center justify-center text-green-600 p-4 text-center">
-                                                                          <svg class="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                                          </svg>
-                                                                          <p class="font-bold text-sm">WhatsApp Connected!</p>
-                                                                          <p class="text-xs text-gray-500 mt-1">You are ready to send messages.</p>
-                                                                      </div>
-                                                                 `;
+                                                                              <div class="w-48 h-48 flex flex-col items-center justify-center text-green-600 p-4 text-center">
+                                                                                  <svg class="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                                                  </svg>
+                                                                                  <p class="font-bold text-sm">WhatsApp Connected!</p>
+                                                                                  <p class="text-xs text-gray-500 mt-1">You are ready to send messages.</p>
+                                                                              </div>
+                                                                         `;
                                                         const badge = document.getElementById('connection-status-badge');
                                                         if (badge) {
                                                             badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
@@ -223,9 +219,9 @@
                                                     } else if (data.message && data.message.includes('wait')) {
                                                         // Gateway is initializing but QR not ready. Keep polling.
                                                         container.innerHTML = `<div class="w-48 h-48 flex flex-col items-center justify-center text-indigo-600 p-4 text-center text-xs">
-                                                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
-                                                                    <p>${data.message}</p>
-                                                                 </div>`;
+                                                                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
+                                                                            <p>${data.message}</p>
+                                                                         </div>`;
                                                         if (!statusPollingInterval) {
                                                             statusPollingInterval = setInterval(loadQrCode, 5000);
                                                         }
@@ -381,4 +377,12 @@
             </div>
         </div>
     </div>
+
+    <!-- Hidden WhatsApp Logout Form -->
+    <form id="whatsapp-logout-form" method="POST" action="{{ route('whatsapp.logout') }}" style="display: none;">
+        @csrf
+        @if($selectedClinicId ?? false)
+            <input type="hidden" name="clinic_id" value="{{ $selectedClinicId }}">
+        @endif
+    </form>
 </x-app-layout>
