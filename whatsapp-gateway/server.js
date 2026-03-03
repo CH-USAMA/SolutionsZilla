@@ -274,17 +274,29 @@ app.post('/messages/send', authMiddleware, async (req, res) => {
         logToFile(`Sending message to ${to} in session ${session}`);
 
         const cleanNumber = to.replace(/\D/g, '');
-        // Use getNumberId to resolve the correct JID (handles LID issues)
+
+        // 1. Check if user is registered (this helps trigger internal resolution)
+        const isRegistered = await sessionData.client.isRegisteredUser(cleanNumber);
+        if (!isRegistered) {
+            logToFile(`User ${to} is NOT registered on WhatsApp`);
+            return res.status(404).json({ error: 'User is not registered on WhatsApp' });
+        }
+
+        // 2. Fetch contact to force resolution (important for new contacts)
+        const contact = await sessionData.client.getContactById(cleanNumber + '@c.us');
+
+        // 3. Try to get Number ID (this usually provides the LID if applicable)
         const numberId = await sessionData.client.getNumberId(cleanNumber);
 
-        let targetId = numberId ? numberId._serialized : `${cleanNumber}@c.us`;
+        let targetId = numberId ? numberId._serialized : (contact.id?._serialized || `${cleanNumber}@c.us`);
 
         if (!numberId) {
-            logToFile(`Number resolution returned null for ${to}, falling back to ${targetId}`);
+            logToFile(`Number resolution (getNumberId) returned null for ${to}, but user is registered. Using ID: ${targetId}`);
         } else {
             logToFile(`Resolved ${to} to ${targetId}`);
         }
 
+        // 4. Try sending the message
         const msg = await sessionData.client.sendMessage(targetId, text);
         logToFile(`Message sent successfully: ${msg.id.id}`);
         res.json({ status: 'sent', messageId: msg.id.id });
@@ -293,7 +305,8 @@ app.post('/messages/send', authMiddleware, async (req, res) => {
         res.status(500).json({
             error: 'Failed to send message',
             details: err.message,
-            stack: err.stack
+            stack: err.stack,
+            numberResolutionTried: targetId || 'none'
         });
     }
 });
