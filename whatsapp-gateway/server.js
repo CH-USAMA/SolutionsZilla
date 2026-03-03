@@ -71,8 +71,13 @@ const initSession = (sessionId) => {
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-gpu'
-            ]
+                '--disable-gpu',
+                '--disable-extensions',
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--disable-accelerated-2d-canvas'
+            ],
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
         }
     });
 
@@ -266,16 +271,21 @@ app.post('/messages/send', authMiddleware, async (req, res) => {
     }
 
     try {
-        // Format phone: remove any + and spaces, ensure it ends with @c.us
-        let chatId = to.replace(/\D/g, '');
-        if (!chatId.endsWith('@c.us')) {
-            chatId += '@c.us';
+        logToFile(`Sending message to ${to} in session ${session}`);
+
+        // Use getNumberId to resolve the correct JID (handles LID issues)
+        const numberId = await sessionData.client.getNumberId(to.replace(/\D/g, ''));
+
+        if (!numberId) {
+            logToFile(`Could not resolve number: ${to}`);
+            return res.status(404).json({ error: 'Number not found on WhatsApp' });
         }
 
-        const msg = await sessionData.client.sendMessage(chatId, text);
+        const msg = await sessionData.client.sendMessage(numberId._serialized, text);
+        logToFile(`Message sent successfully: ${msg.id.id}`);
         res.json({ status: 'sent', messageId: msg.id.id });
     } catch (err) {
-        console.error('Send error:', err);
+        logToFile(`Send error for session ${session}:`, err);
         res.status(500).json({ error: 'Failed to send message', details: err.message });
     }
 });
