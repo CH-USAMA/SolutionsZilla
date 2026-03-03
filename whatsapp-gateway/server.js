@@ -273,20 +273,28 @@ app.post('/messages/send', authMiddleware, async (req, res) => {
     try {
         logToFile(`Sending message to ${to} in session ${session}`);
 
+        const cleanNumber = to.replace(/\D/g, '');
         // Use getNumberId to resolve the correct JID (handles LID issues)
-        const numberId = await sessionData.client.getNumberId(to.replace(/\D/g, ''));
+        const numberId = await sessionData.client.getNumberId(cleanNumber);
+
+        let targetId = numberId ? numberId._serialized : `${cleanNumber}@c.us`;
 
         if (!numberId) {
-            logToFile(`Could not resolve number: ${to}`);
-            return res.status(404).json({ error: 'Number not found on WhatsApp' });
+            logToFile(`Number resolution returned null for ${to}, falling back to ${targetId}`);
+        } else {
+            logToFile(`Resolved ${to} to ${targetId}`);
         }
 
-        const msg = await sessionData.client.sendMessage(numberId._serialized, text);
+        const msg = await sessionData.client.sendMessage(targetId, text);
         logToFile(`Message sent successfully: ${msg.id.id}`);
         res.json({ status: 'sent', messageId: msg.id.id });
     } catch (err) {
         logToFile(`Send error for session ${session}:`, err);
-        res.status(500).json({ error: 'Failed to send message', details: err.message });
+        res.status(500).json({
+            error: 'Failed to send message',
+            details: err.message,
+            stack: err.stack
+        });
     }
 });
 
